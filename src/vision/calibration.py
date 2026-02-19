@@ -2,7 +2,7 @@
 
 import cv2
 import numpy as np
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Any
 from dataclasses import dataclass, field
 from pathlib import Path
 import json

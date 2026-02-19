@@ -3,6 +3,15 @@
 import cv2
 import numpy as np
 from typing import Optional, Tuple, Dict
+from dataclasses import dataclass
+
+
+@dataclass
+class Anchor:
+    """Represents a detected UI anchor."""
+    name: str
+    position: Tuple[int, int]  # (x, y) in pixels
+    confidence: float
 
 
 class AnchorDetector:
@@ -17,7 +26,7 @@ class AnchorDetector:
         """Initialize anchor detector."""
         self.enabled = False  # MVP: Disabled
 
-    def detect_anchors(self, frame: np.ndarray) -> Dict[str, Tuple[int, int]]:
+    def detect_anchors(self, frame: np.ndarray) -> Dict[str, Anchor]:
         """
         Detect UI anchor points in frame.
 
@@ -28,7 +37,7 @@ class AnchorDetector:
             frame: Input frame
 
         Returns:
-            Dictionary of anchor names to (x, y) coordinates
+            Dictionary of anchor names to Anchor objects
         """
         if not self.enabled:
             return self._get_default_anchors(frame.shape)
@@ -37,7 +46,7 @@ class AnchorDetector:
         # This is a placeholder for future implementation
         return self._get_default_anchors(frame.shape)
 
-    def _get_default_anchors(self, shape: Tuple[int, ...]) -> Dict[str, Tuple[int, int]]:
+    def _get_default_anchors(self, shape: Tuple[int, ...]) -> Dict[str, Anchor]:
         """
         Get default anchor positions based on frame resolution.
 
@@ -50,15 +59,31 @@ class AnchorDetector:
         height, width = shape[:2]
 
         return {
-            "hp_shield_bottom_left": (int(0.10 * width), int(0.85 * height)),
-            "minimap_top_right": (int(0.90 * width), int(0.10 * height)),
-            "inventory_bottom_right": (int(0.90 * width), int(0.85 * height)),
-            "compass_top_center": (int(0.50 * width), int(0.05 * height)),
+            "hp_shield_bottom_left": Anchor(
+                name="hp_shield_bottom_left",
+                position=(int(0.10 * width), int(0.85 * height)),
+                confidence=1.0
+            ),
+            "minimap_top_right": Anchor(
+                name="minimap_top_right",
+                position=(int(0.90 * width), int(0.10 * height)),
+                confidence=1.0
+            ),
+            "inventory_bottom_right": Anchor(
+                name="inventory_bottom_right",
+                position=(int(0.90 * width), int(0.85 * height)),
+                confidence=1.0
+            ),
+            "compass_top_center": Anchor(
+                name="compass_top_center",
+                position=(int(0.50 * width), int(0.05 * height)),
+                confidence=1.0
+            ),
         }
 
     def calibrate_roi(
         self,
-        detected_anchors: Dict[str, Tuple[int, int]],
+        detected_anchors: Dict[str, Anchor],
         roi_config: Dict
     ) -> Dict:
         """
