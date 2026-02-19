@@ -19,6 +19,7 @@ from vision.state_builder import StateBuilder
 from trigger.engine import TriggerEngine
 from dialogue.templates import DialogueTemplateManager
 from dialogue.openai_client import OpenAIClient
+from dialogue.realtime_client import RealtimeVoiceClient
 from utils.logger import SessionLogger
 from utils.time import get_timestamp_ms
 
@@ -63,6 +64,18 @@ def parse_args():
         type=str,
         default="./configs/prompts/system.txt",
         help="Path to system prompt file"
+    )
+    parser.add_argument(
+        "--voice",
+        action="store_true",
+        help="Enable voice output (Realtime API)"
+    )
+    parser.add_argument(
+        "--voice-model",
+        type=str,
+        default="tts-1",
+        choices=["tts-1", "tts-1-hd"],
+        help="Voice model to use"
     )
 
     return parser.parse_args()
@@ -115,6 +128,19 @@ def main():
         print(f"Warning: OpenAI client not initialized: {e}")
         print("Continuing with template-only mode.")
         openai_client = None
+
+    # Realtime voice client (optional - Phase 2)
+    voice_client = None
+    if args.voice:
+        try:
+            voice_client = RealtimeVoiceClient(
+                system_prompt_path=str(system_prompt_path),
+                enable_audio_output=True
+            )
+            print("Realtime voice client initialized.")
+        except Exception as e:
+            print(f"Warning: Voice client not initialized: {e}")
+            print("Continuing with text-only mode.")
 
     # Video capture
     if args.input == "video":
@@ -204,10 +230,25 @@ def main():
 
                         print(f"  Response: {response_text}")
 
+                        # Voice output (Phase 2)
+                        voice_response = None
+                        if voice_client:
+                            try:
+                                voice_response = voice_client.speak_with_trigger(
+                                    trigger_result,
+                                    state,
+                                    movement_state
+                                )
+                                if voice_response:
+                                    print(f"  Voice: generated ({voice_response.duration_ms}ms)")
+                            except Exception as e:
+                                print(f"Voice error: {e}")
+
                         # Log trigger and response
                         logger.log_trigger({
                             "trigger": trigger_result,
                             "response": response_text,
+                            "voice_duration_ms": voice_response.duration_ms if voice_response else None,
                         })
 
                         logger.log_response({
@@ -217,6 +258,7 @@ def main():
                             "response": response_text,
                             "movement_state": movement_state,
                             "timestamp_ms": trigger_result["timestamp_ms"],
+                            "voice_duration_ms": voice_response.duration_ms if voice_response else None,
                         })
 
                     # Progress update every 100 frames
