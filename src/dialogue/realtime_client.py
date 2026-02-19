@@ -1,372 +1,302 @@
-"""OpenAI Realtime API client for voice conversation."""
+"""Realtime voice client using OpenAI Realtime API."""
 
-import os
 import asyncio
 import json
 import time
-from typing import Dict, Any, Optional, Callable, List
-from dataclasses import dataclass
+from typing import Optional, Dict, Any, Callable, List
+import numpy as np
 
+
+# Try to import OpenAI
 try:
-    from openai import AsyncOpenAI
+    import openai
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
 
-
-@dataclass
-class VoiceResponse:
-    """Voice response from Realtime API."""
-    text: str
-    audio_data: Optional[bytes] = None
-    duration_ms: Optional[int] = None
-    timestamp: float = None
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = time.time()
+# Try to import audio libraries
+try:
+    import soundfile as sf
+    SOUNDDEVICE_AVAILABLE = True
+except ImportError:
+    SOUNDDEVICE_AVAILABLE = False
 
 
 class RealtimeVoiceClient:
     """
-    OpenAI Realtime API client for voice conversations.
+    OpenAI Realtime API client for voice conversation.
 
-    This client manages WebSocket connections to OpenAI's Realtime API,
-    handles audio I/O, and provides low-latency voice responses.
-
-    MVP Implementation:
-    - Text → Speech (TTS) with queue-based playback
-    - Cooldown and interrupt control
-    - Priority-based response management
-
-    Future Enhancements:
-    - Speech → Text (STT) for player voice input
-    - Bidirectional conversation
-    - WebRTC streaming integration
+    Supports audio input/output with low latency.
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gpt-4o-realtime-preview-2024-10-01",
-        voice: str = "alloy",
+        model: str = "gpt-4o-realtime-preview",
         system_prompt_path: Optional[str] = None,
-        cooldown_ms: int = 3000,  # Minimum time between responses
-        max_response_length_ms: int = 10000,  # Maximum response duration
-        enable_audio_output: bool = True
+        voice: str = "alloy"
     ):
         """
-        Initialize Realtime Voice client.
+        Initialize Realtime voice client.
 
         Args:
-            api_key: OpenAI API key
-            model: Realtime model to use
-            voice: Voice to use (alloy, echo, fable, onyx, nova, shimmer)
+            api_key: OpenAI API key (reads from env if not provided)
+            model: Model to use
             system_prompt_path: Path to system prompt file
-            cooldown_ms: Minimum cooldown between responses
-            max_response_length_ms: Maximum response duration
-            enable_audio_output: Enable audio output (True) or text-only (False)
+            voice: Voice to use (alloy, echo, etc.)
         """
         if not OPENAI_AVAILABLE:
-            self.client = None
-            self.enabled = False
-            self.api_key = None
-            self.model = model
-            self.voice = voice
-            self.system_prompt = self._load_system_prompt(system_prompt_path)
-            self.cooldown_ms = cooldown_ms
-            self.max_response_length_ms = max_response_length_ms
-            self.enable_audio_output = enable_audio_output
-            self.session = None
-            self.is_speaking = False
-            self.last_spoken_time = 0.0
-            self.response_queue = None
-            self.interrupt_requested = False
-            self.loop = None
-            return
+            raise ImportError(
+                "OpenAI library is not available. "
+                "Install with: pip install openai"
+            )
 
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            self.enabled = False
-            self.client = None
-            self.model = model
-            self.voice = voice
-            self.system_prompt = self._load_system_prompt(system_prompt_path)
-            self.cooldown_ms = cooldown_ms
-            self.max_response_length_ms = max_response_length_ms
-            self.enable_audio_output = enable_audio_output
-            self.session = None
-            self.is_speaking = False
-            self.last_spoken_time = 0.0
-            self.response_queue = None
-            self.interrupt_requested = False
-            self.loop = None
-            return
-
-        self.client = AsyncOpenAI(api_key=self.api_key)
+        self.api_key = api_key
         self.model = model
         self.voice = voice
         self.system_prompt = self._load_system_prompt(system_prompt_path)
-        self.cooldown_ms = cooldown_ms
-        self.max_response_length_ms = max_response_length_ms
-        self.enable_audio_output = enable_audio_output
 
-        # State management
-        self.enabled = True
-        self.session: Optional[Any] = None
-        self.is_speaking = False
-        self.last_spoken_time = 0.0
-        self.response_queue: asyncio.Queue[VoiceResponse] = asyncio.Queue()
-        self.interrupt_requested = False
+        # Audio settings
+        self.sample_rate = 24000  # OpenAI Realtime API requirement
+        self.channels = 1  # Mono
 
-        # Event loop for async operations
-        self.loop = asyncio.new_event_loop()
+        # OpenAI client
+        self.client: Optional[openai.AsyncOpenAI] = None
+        self.realtime: Optional[openai.AsyncRealtime] = None
+
+        # Audio buffers
+        self._audio_input_buffer: List[float] = []
+        self._max_input_buffer = 4800  # 200ms at 24kHz
+
+        # Callbacks
+        self._on_audio_delta: Optional[Callable] = None
+        self._on_text_delta: Optional[Callable] = None
+        self._on_function_call: Optional[Callable] = None
+
+        # State
+        self._connected = False
+        self._speaking = False
+        self._interrupt_requested = False
+
+        # Statistics
+        self._latency_samples = []
+        self._total_audio_sent = 0
+        self._total_audio_received = 0
 
     def _load_system_prompt(self, path: Optional[str]) -> str:
-        """Load system prompt from file."""
-        if path and os.path.exists(path):
-            with open(path, 'r') as f:
-                return f.read()
+        """
+        Load system prompt from file.
 
-        # Default system prompt for voice coaching
+        Args:
+            path: Path to system prompt file
+
+        Returns:
+            System prompt string
+        """
+        if path:
+            try:
+                with open(path, 'r') as f:
+                    return f.read()
+            except Exception as e:
+                print(f"Failed to load system prompt: {e}")
+
+        # Default system prompt
         return """You are an AI English teacher and gaming coach for Fortnite players. Your goal is to help players improve their English skills while playing the game naturally.
 
-## Voice Communication Guidelines
+## Communication Style
 
-- **Keep responses SHORT**: 1-2 sentences during combat, 2-3 sentences outside combat
-- **Speak naturally**: Use clear, gaming-appropriate English
-- **Don't over-explain**: Players are focused on the game
-- **Use short phrases**: "Low HP! Heal!" instead of "Your health is very low, you should heal"
+- Keep responses SHORT during combat (1-2 sentences max)
+- Use clear, natural gaming English
+- When confidence is low, ask questions instead of making statements
+- Teach vocabulary in context, not as a list
 
-## Priority Levels
+## Priority Guidelines
 
-- **P0 (Survival)**: Urgent commands. Be direct and loud.
-- **P1 (Tactical)**: Strategic suggestions. Be informative but brief.
-- **P2 (Learning)**: Vocabulary lessons. Only when safe.
-- **P3 (Chatter)**: Casual conversation. Very short.
+- **P0 (Survival)**: Urgent, direct commands
+- **P1 (Tactical)**: Informative, strategic suggestions
+- **P2 (Learning)**: Educational, contextual vocabulary lessons
+- **P3 (Chatter)**: Casual conversation, session review
 
 ## Combat vs Non-Combat
 
 - **Combat**: Maximum 2 sentences. Focus on survival.
-- **Non-Combat**: 2-4 sentences. You can explain briefly.
+- **Non-Combat**: 2-4 sentences. You can explain and teach.
 
-## Example Responses
-
-P0 - Low HP in combat: "Low HP! Get cover now!"
-P1 - Storm shrinking: "Storm is moving. Rotate to the safe zone."
-P2 - Weapon pickup: "That's a Legendary assault rifle. Great for medium range."
-P3 - Small talk: "How's it going?"
+Remember: The player is here to learn English while gaming. Keep it fun, practical, and supportive!
 """
 
-    async def initialize_session(self) -> bool:
+    async def connect(self):
         """
-        Initialize Realtime API session.
+        Connect to OpenAI Realtime API.
+
+        Raises:
+            RuntimeError if API key is not set
+        """
+        api_key = self.api_key or openai.api_key
+        if not api_key:
+            raise RuntimeError("OpenAI API key is required")
+
+        # Initialize AsyncOpenAI client
+        self.client = openai.AsyncOpenAI(api_key=api_key)
+
+        # Connect to Realtime API
+        self.realtime = await self.client.audio.speech.create(
+            model=self.model,
+            voice=self.voice,
+            input_format="pcm16",
+            output_format="pcm16",
+            temperature=0.7,
+        )
+
+        self._connected = True
+        print(f"Connected to OpenAI Realtime API (model: {self.model})")
+
+    async def disconnect(self):
+        """Disconnect from OpenAI Realtime API."""
+        if self.realtime:
+            await self.realtime.close()
+            self.realtime = None
+
+        self._connected = False
+        print("Disconnected from OpenAI Realtime API")
+
+    async def send_audio(self, audio_data: np.ndarray) -> bool:
+        """
+        Send audio data to OpenAI Realtime API.
+
+        Args:
+            audio_data: Audio data as numpy array (float32 or int16)
 
         Returns:
-            True if successful, False otherwise
+            True if sent successfully
         """
-        if not self.enabled:
+        if not self._connected or self.realtime is None:
             return False
 
         try:
-            # Create a realtime session
-            # Note: The exact API will depend on OpenAI's Realtime API implementation
-            # This is a placeholder structure based on expected API
+            # Convert to float32 if needed
+            if audio_data.dtype == np.int16:
+                audio_data = audio_data.astype(np.float32) / 32768.0
 
-            self.session = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "system", "content": self.system_prompt}],
-                audio={"voice": self.voice, "format": "pcm16"},
-                temperature=0.7
-            )
+            # Send audio through the realtime API
+            await self.realtime.send_audio(audio_data.tolist())
+
+            self._total_audio_sent += len(audio_data)
+
+            # Update latency tracking
+            latency_start = time.time()
+
+            @self.realtime.on("audio_delta")
+            def track_latency(delta):
+                latency_ms = (time.time() - latency_start) * 1000
+                self._latency_samples.append(latency_ms)
 
             return True
 
         except Exception as e:
-            print(f"Failed to initialize Realtime session: {e}")
+            print(f"Failed to send audio: {e}")
             return False
 
-    def speak(
-        self,
-        text: str,
-        priority: int = 2,
-        allow_interrupt: bool = True
-    ) -> Optional[VoiceResponse]:
+    async def send_text(self, text: str) -> bool:
         """
-        Speak text with voice synthesis.
-
-        Synchronous wrapper for async speech generation.
+        Send text message to OpenAI Realtime API.
 
         Args:
-            text: Text to speak
-            priority: Priority level (0=highest, 3=lowest)
-            allow_interrupt: Allow this speech to interrupt current speech
+            text: Text message to send
 
         Returns:
-            VoiceResponse object or None if failed
+            True if sent successfully
         """
-        if not self.enabled:
-            # Return text-only response if audio disabled
-            return VoiceResponse(text=text)
-
-        # Check cooldown
-        time_since_last = (time.time() - self.last_spoken_time) * 1000
-        if time_since_last < self.cooldown_ms and priority > 1:
-            # Skip low-priority speech during cooldown
-            return None
-
-        # Interrupt current speech if requested and allowed
-        if allow_interrupt and self.is_speaking:
-            self.interrupt_requested = True
-
-        # Run async speech generation in event loop
-        try:
-            response = self.loop.run_until_complete(
-                self._generate_speech(text)
-            )
-            self.last_spoken_time = time.time()
-            return response
-        except Exception as e:
-            print(f"Speech generation failed: {e}")
-            return VoiceResponse(text=text)
-
-    async def _generate_speech(self, text: str) -> VoiceResponse:
-        """
-        Generate speech from text.
-
-        Args:
-            text: Text to convert to speech
-
-        Returns:
-            VoiceResponse with audio data
-        """
-        if not self.enable_audio_output:
-            return VoiceResponse(text=text)
+        if not self._connected or self.realtime is None:
+            return False
 
         try:
-            # Use OpenAI's TTS API as MVP
-            # In Phase 2+, we'll use Realtime API directly
-            from openai import AsyncOpenAI
-            tts_client = AsyncOpenAI(api_key=self.api_key)
-
-            response = await tts_client.audio.speech.create(
-                model="tts-1",
-                voice=self.voice,
-                input=text[:500]  # Limit text length
-            )
-
-            audio_data = await response.aread()
-
-            return VoiceResponse(
-                text=text,
-                audio_data=audio_data,
-                duration_ms=len(audio_data) // 32  # Approximate for 16kHz
-            )
+            await self.realtime.send_text(text)
+            return True
 
         except Exception as e:
-            print(f"TTS generation failed: {e}")
-            return VoiceResponse(text=text)
+            print(f"Failed to send text: {e}")
+            return False
 
-    def speak_with_trigger(
-        self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
-        movement_state: str
-    ) -> Optional[VoiceResponse]:
+    def on_audio_delta(self, callback: Callable):
         """
-        Generate and speak response based on trigger.
+        Set callback for audio delta events.
 
         Args:
-            trigger_info: Trigger information (id, name, priority, template)
-            state: Current game state
-            movement_state: Movement state ("combat" or "non_combat")
+            callback: Callback function taking audio data
+        """
+        self._on_audio_delta = callback
+
+    def on_text_delta(self, callback: Callable):
+        """
+        Set callback for text delta events.
+
+        Args:
+            callback: Callback function taking text string
+        """
+        self._on_text_delta = callback
+
+    def on_function_call(self, callback: Callable):
+        """
+        Set callback for function call events.
+
+        Args:
+            callback: Callback function taking function call data
+        """
+        self._on_function_call = callback
+
+    async def interrupt(self):
+        """
+        Interrupt current speech.
+
+        Stops current TTS output.
+        """
+        self._interrupt_requested = True
+        print("Speech interrupted")
+
+    def reset_interrupt(self):
+        """Reset interrupt flag."""
+        self._interrupt_requested = False
+
+    def is_speaking(self) -> bool:
+        """
+        Check if AI is currently speaking.
 
         Returns:
-            VoiceResponse or None
+            True if speaking
         """
-        if not self.enabled:
-            return None
+        return self._speaking
 
-        priority = trigger_info.get('priority', 2)
+    def get_statistics(self) -> Dict[str, Any]:
+        """
+        Get realtime voice client statistics.
 
-        # Get or generate text
-        template = trigger_info.get('template')
-        if template:
-            text = self._enhance_template(template, state, movement_state)
-        else:
-            text = self._generate_text(trigger_info, state, movement_state)
+        Returns:
+            Statistics dictionary
+        """
+        avg_latency = (
+            sum(self._latency_samples) / len(self._latency_samples)
+            if self._latency_samples else 0.0
+        )
 
-        if not text:
-            return None
+        return {
+            "connected": self._connected,
+            "model": self.model,
+            "voice": self.voice,
+            "sample_rate": self.sample_rate,
+            "speaking": self._speaking,
+            "audio_sent_bytes": self._total_audio_sent,
+            "audio_received_bytes": self._total_audio_received,
+            "latency_ms_avg": avg_latency,
+            "latency_samples": len(self._latency_samples),
+            "interrupt_requested": self._interrupt_requested,
+        }
 
-        # P0 triggers should always be allowed to interrupt
-        allow_interrupt = (priority == 0)
-
-        return self.speak(text, priority=priority, allow_interrupt=allow_interrupt)
-
-    def _enhance_template(
-        self,
-        template: str,
-        state: Dict[str, Any],
-        movement_state: str
-    ) -> str:
-        """Enhance template with state information."""
-        # MVP: Return template as-is
-        # In Phase 2+, add context from state
-        return template
-
-    def _generate_text(
-        self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
-        movement_state: str
-    ) -> str:
-        """Generate text response (fallback if no template)."""
-        return f"Response: {trigger_info.get('name', 'Unknown')}"
-
-    def stop(self) -> None:
-        """Stop current speech."""
-        self.interrupt_requested = True
-        self.is_speaking = False
-
-    def shutdown(self) -> None:
-        """Shutdown client and cleanup resources."""
-        self.stop()
-        if self.loop and not self.loop.is_closed():
-            self.loop.close()
-        self.session = None
-
-    def __enter__(self):
-        """Context manager entry."""
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.shutdown()
-        return False
-
-
-# Convenience function for creating a client
-def create_voice_client(
-    api_key: Optional[str] = None,
-    voice: str = "alloy",
-    enable_audio: bool = True
-) -> RealtimeVoiceClient:
-    """
-    Create a Realtime Voice client with sensible defaults.
-
-    Args:
-        api_key: OpenAI API key
-        voice: Voice to use
-        enable_audio: Enable audio output
-
-    Returns:
-        Configured RealtimeVoiceClient instance
-    """
-    return RealtimeVoiceClient(
-        api_key=api_key,
-        voice=voice,
-        enable_audio_output=enable_audio,
-        cooldown_ms=3000,
-        max_response_length_ms=10000
-    )
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.disconnect()

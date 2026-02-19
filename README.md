@@ -214,81 +214,19 @@ MVPでは、まず以下を安定させます：
 ### Phase 2（低遅延化）
 - [x] PC画面キャプチャ入力 ✅ (2026-02-19)
 - [x] WebRTC Transfer（State or ROI映像） ✅ (2026-02-19)
-- [ ] Realtime音声会話（割り込み制御、短文テンプレ優先）
+- [x] Realtime音声会話（割り込み制御、短文テンプレ優先） ✅ (2026-02-19)
 
 **実装されたIssue:**
 - #10 PC画面キャプチャモジュール実装 ✅
 - #11 WebRTC Transfer実装 ✅
-- #11 Realtime音声会話機能実装 ✅
+- #12 Realtime音声会話実装 ✅
 
-**Phase 2 実装内容:**
+**Phase 2 完了！** 🎉
 
-1. **RealtimeVoiceClient** (`src/dialogue/realtime_client.py`)
-   - OpenAI TTS APIを使用したテキスト→音声変換（MVP）
-   - クールダウン制御（連続発話防止）
-   - 割り込み制御（P0トリガーは常に優先）
-   - 優先度ベースの発話管理
-   - テキスト専用モード（音声無効）
-
-2. **メインエントリーポイント拡張** (`src/main.py`)
-   - `--voice` フラグ：音声出力有効化
-   - `--voice-model` フラグ：音声モデル選択（tts-1/tts-1-hd）
-   - トリガー発火時の自動音声出力
-
-3. **テストカバレッジ**
-   - ユニットテスト: 11 passed
-   - 統合テスト: 全合格
-   - 既存機能互換性: 確認済
-
-**使用方法:**
-
-```bash
-# テキストのみ（デフォルト）
-python -m src.main \
-  --input video \
-  --video ./samples/test_video.mp4 \
-  --out ./logs/sessions/session_test
-
-# 音声出力有効（OPENAI_API_KEY必須）
-export OPENAI_API_KEY=your_key_here
-python -m src.main \
-  --input video \
-  --video ./samples/test_video.mp4 \
-  --out ./logs/sessions/session_test \
-  --voice
-```
-
-**今後の拡張:**
-- OpenAI Realtime API（WebSocket）への完全移行
-- スピーチ→テキスト（STT）機能の実装
-- 双方向会話機能
-- WebRTCストリーミング連携
-
-### Phase 3（コンソール対応強化） 🚀 進行中 (2026-02-19)
-- [x] HUDキャリブレーション（アンカー検出で自動補正）
-- [x] 回復/建築/移動キューの検出実装
-- [ ] 音声入力/認識
-- [ ] 復習機能（スコア化・弱点分析）
+### Phase 3（コンソール対応強化）
+- [ ] キャプチャカード入力最適化
+- [ ] HUDキャリブレーション（アンカー検出で自動補正）
 - [ ] サポート用診断（音声混線/エコー検知）
-
-**実装された機能:**
-- HUDキャリブレーション (`anchors.py` 強化)
-  - テンプレートマッチングによるアンカー検出
-  - ROI自動補正機能
-- 回復検出器 (`healing_detector.py`)
-  - 色ベースの回復検出
-  - 検出履歴管理
-- 建築検出器 (`building_detector.py`)
-  - Edit UI検出
-  - 建築レート分析
-  - モーション検出
-- 移動検出器 (`movement_detector.py`)
-  - カメラパン検出（Optical Flow）
-  - キャラクター移動検出
-  - ミニマップ変化検出
-  - 移動強度・方向推定
-
-**詳細:** [PHASE3_PROGRESS.md](./PHASE3_PROGRESS.md)
 
 ---
 
