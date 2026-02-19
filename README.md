@@ -224,9 +224,92 @@ MVPでは、まず以下を安定させます：
 **Phase 2 完了！** 🎉
 
 ### Phase 3（コンソール対応強化）
-- [ ] キャプチャカード入力最適化
-- [ ] HUDキャリブレーション（アンカー検出で自動補正）
-- [ ] サポート用診断（音声混線/エコー検知）
+- [x] キャプチャカード入力最適化 ✅ (2026-02-19)
+- [x] HUDキャリブレーション（アンカー検出で自動補正） ✅ (2026-02-19)
+- [x] サポート用診断（音声混線/エコー検知） ✅ (2026-02-19)
+
+**実装されたIssue:**
+- #10 PC画面キャプチャモジュール実装 ✅
+- #11 Realtime音声会話機能実装 ✅
+- #12 Phase 3: HUDキャリブレーションと音声診断機能実装 ✅
+- #13 キャプチャカード入力最適化実装 ✅
+
+**Phase 3 完了！** 🎉
+
+**Phase 3 実装内容:**
+
+1. **HUDCalibrator** (`src/vision/calibration.py`)
+   - アンカー検出による自動ROIキャリブレーション
+   - キャリブレーション品質の統計管理
+   - キャリブレーション結果の可視化
+   - キャリブレーション設定の保存・読み込み
+
+2. **AudioDiagnostics** (`src/diagnostics/audio_diagnostics.py`)
+   - 音声デバイス検出（Linux/macOS/Windows対応）
+   - OpenAI APIキー設定チェック
+   - 推定遅延計算
+   - 一般的な音声問題の診断
+   - 診断レポートの出力・保存
+
+3. **CaptureCardCapture** (`src/capture/capture_card.py`)
+   - キャプチャカードデバイスの自動検出
+   - 低遅延キャプチャ設定（バッファサイズ1、自動露出無効化）
+   - デバイス列挙機能
+   - 解像度・フレームレートの最適化
+   - コンテキストマネージャー対応
+
+**使用方法:**
+
+```bash
+# HUDキャリブレーション
+python -c "
+from vision.calibration import create_hud_calibrator
+import cv2
+
+calibrator = create_hud_calibrator('./configs/roi_defaults.yaml')
+frame = cv2.imread('fortnite_screenshot.png')
+result = calibrator.calibrate_from_frame(frame)
+if result.success:
+    print('Calibration successful!')
+    calibrator.save_calibration('./configs/calibrated_roi.yaml')
+else:
+    print(f'Calibration failed: {result.error_message}')
+"
+
+# 音声診断
+python -c "
+from diagnostics.audio_diagnostics import create_audio_diagnostics
+
+diag = create_audio_diagnostics()
+diag.run_all_diagnostics()
+diag.print_report()
+diag.save_report('./diagnostics/audio_report.json')
+"
+
+# キャプチャカード入力
+python -c "
+from capture.capture_card import create_capture_card_capture
+from vision.roi import ROIExtractor
+from trigger.engine import TriggerEngine
+
+# キャプチャカードデバイスを開く
+cap = create_capture_card_capture(device_index=0, resolution=(1920, 1080), fps=60)
+
+with cap as capture:
+    # 利用可能なデバイス一覧を表示
+    devices = capture.list_capture_cards()
+    print(f'Found {len(devices)} capture card devices')
+
+    # フレームを読み込み
+    frame = capture.read()
+    print(f'Captured frame: {frame.shape}')
+"
+```
+
+**今後の拡張:**
+- リアルタイム自動キャリブレーション
+- エコー検知の高度化（ループバック検出など）
+- キャプチャカード専用の高度な設定（色空間、入力形式など）
 
 ---
 
