@@ -1,0 +1,4 @@
+# WebRTC dependencies for Phase 2
+
+aiortc>=1.6.0
+aiohttp>=3.8.0
