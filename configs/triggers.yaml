@@ -1,0 +1,155 @@
+# Trigger Rules for AI Coach
+# Priority: P0 (Survival) > P1 (Tactical) > P2 (Learning) > P3 (Chatter)
+
+triggers:
+  # P0: Survival Triggers (Highest Priority)
+  - id: p0_knocked
+    name: "Knocked Down"
+    priority: 0
+    enabled: true
+    conditions:
+      - field: "player.status.is_knocked"
+        operator: "eq"
+        value: true
+    template:
+      combat: "You're knocked! Ping your location for your teammates!"
+      non_combat: "Stay calm! Your teammates are coming to revive you."
+    cooldown_ms: 10000
+    interrupt_higher_priority: false
+
+  - id: p0_low_hp
+    name: "Low HP Warning"
+    priority: 0
+    enabled: true
+    conditions:
+      - field: "player.status.hp"
+        operator: "lt"
+        value: 30
+    template:
+      combat: "Low HP! Find cover immediately!"
+      non_combat: "Your health is critical. Heal up before fighting."
+    cooldown_ms: 15000
+    interrupt_higher_priority: false
+
+  - id: p0_storm_damage
+    name: "Storm Damage Warning"
+    priority: 0
+    enabled: true
+    conditions:
+      - field: "world.storm.in_storm"
+        operator: "eq"
+        value: true
+    template:
+      combat: "Get out of the storm! Now!"
+      non_combat: "You're taking storm damage. Move to the safe zone."
+    cooldown_ms: 8000
+    interrupt_higher_priority: false
+
+  # P1: Tactical Triggers
+  - id: p1_storm_shrinking
+    name: "Storm Shrinking"
+    priority: 1
+    enabled: true
+    conditions:
+      - field: "world.storm.is_shrinking"
+        operator: "eq"
+        value: true
+    template:
+      combat: "Storm is moving! Get ready to rotate."
+      non_combat: "The storm is shrinking. Time to move to the safe zone."
+    cooldown_ms: 30000
+    interrupt_higher_priority: false
+
+  - id: p1_rotate_suggestion
+    name: "Rotate Suggestion"
+    priority: 1
+    enabled: true
+    conditions:
+      - field: "world.storm.next_circle_distance"
+        operator: "lt"
+        value: 100
+    template:
+      combat: "Next circle is close. Rotate safely."
+      non_combat: "You're far from the next circle. Start moving that way."
+    cooldown_ms: 45000
+    interrupt_higher_priority: false
+
+  # P2: Learning Triggers
+  - id: p2_weapon_learning
+    name: "Weapon Vocabulary"
+    priority: 2
+    enabled: true
+    conditions:
+      - field: "player.weapon.new_weapon_detected"
+        operator: "eq"
+        value: true
+    template:
+      combat: null  # Disabled during combat
+      non_combat: "You picked up a {weapon_name}! This is great for {situation}."
+    cooldown_ms: 60000
+    interrupt_higher_priority: false
+
+  - id: p2_item_learning
+    name: "Item Vocabulary"
+    priority: 2
+    enabled: true
+    conditions:
+      - field: "player.item.new_item_detected"
+        operator: "eq"
+        value: true
+    template:
+      combat: null  # Disabled during combat
+      non_combat: "Nice find! This {item_name} is useful for {purpose}."
+    cooldown_ms: 45000
+    interrupt_higher_priority: false
+
+  - id: p2_past_tense_practice
+    name: "Past Tense Practice"
+    priority: 2
+    enabled: true
+    conditions:
+      - field: "session.events.combat_ended"
+        operator: "eq"
+        value: true
+    template:
+      combat: null  # Disabled during combat
+      non_combat: "What happened in that fight? Tell me what you did."
+    cooldown_ms: 120000
+    interrupt_higher_priority: false
+
+  # P3: Chatter/Review Triggers
+  - id: p3_session_summary
+    name: "Session Summary"
+    priority: 3
+    enabled: true
+    conditions:
+      - field: "session.phase"
+        operator: "eq"
+        value: "post_game"
+    template:
+      combat: null
+      non_combat: "Great session! What did you learn today?"
+    cooldown_ms: 0
+    interrupt_higher_priority: false
+
+  - id: p3_small_talk
+    name: "Small Talk"
+    priority: 3
+    enabled: true
+    conditions:
+      - field: "session.inactivity_duration_ms"
+        operator: "gt"
+        value: 30000  # 30 seconds of no triggers
+    template:
+      combat: null  # Disabled during combat
+      non_combat: "How's it going? Anything you want to practice?"
+    cooldown_ms: 90000
+    interrupt_higher_priority: false
+
+# Global Settings
+settings:
+  cooldown_enabled: true
+  interrupt_higher_priority: true
+  max_response_length_chars: 200
+  combat_suppress_priority: [2, 3]  # Suppress P2 and P3 during combat
+  inactivity_threshold_ms: 30000

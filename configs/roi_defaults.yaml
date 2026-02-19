@@ -1,0 +1,61 @@
+# ROI Defaults for Fortnite HUD
+# Normalized coordinates (0-1): [x_min, y_min, x_max, y_max]
+
+rois:
+  # HP/Shield (Bottom Left)
+  hp_shield:
+    id: roi_1
+    name: "HP/Shield"
+    bbox: [0.03, 0.78, 0.32, 0.98]
+    fields:
+      - name: "hp"
+        type: "ocr"
+        location: [0.05, 0.85, 0.15, 0.95]
+      - name: "shield"
+        type: "ocr"
+        location: [0.05, 0.78, 0.15, 0.84]
+
+  # Minimap/Storm (Top Right)
+  minimap_storm:
+    id: roi_2
+    name: "Minimap/Storm"
+    bbox: [0.70, 0.02, 0.98, 0.30]
+    fields:
+      - name: "storm_phase"
+        type: "icon_detection"
+        location: [0.85, 0.05, 0.95, 0.15]
+
+  # Knocked/Revive (Center)
+  knocked_revive:
+    id: roi_3
+    name: "Knocked/Revive"
+    bbox: [0.35, 0.40, 0.65, 0.65]
+    fields:
+      - name: "is_knocked"
+        type: "icon_detection"
+        location: [0.40, 0.45, 0.60, 0.60]
+      - name: "revive_available"
+        type: "icon_detection"
+        location: [0.40, 0.45, 0.60, 0.60]
+
+  # Weapon/Ammo/Materials (Bottom Right)
+  weapon_ammo_materials:
+    id: roi_4
+    name: "Weapon/Ammo/Materials"
+    bbox: [0.55, 0.72, 0.98, 0.98]
+    fields:
+      - name: "weapon_name"
+        type: "icon_detection"
+        location: [0.85, 0.85, 0.95, 0.95]
+      - name: "ammo_count"
+        type: "ocr"
+        location: [0.90, 0.88, 0.95, 0.92]
+      - name: "materials"
+        type: "ocr"
+        location: [0.80, 0.78, 0.90, 0.82]
+
+# Calibration settings
+calibration:
+  enabled: false  # MVP: false, Phase 3: true (auto-calibration)
+  anchor_detection_timeout_ms: 3000
+  auto_correct_roi: false
