@@ -1,0 +1,9 @@
+# Minimal dependencies for MVP testing
+
+# Core
+numpy>=1.24.0
+opencv-python>=4.8.0
+
+# Config
+pyyaml>=6.0
+python-dotenv>=1.0.0

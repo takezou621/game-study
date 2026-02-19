@@ -45,6 +45,10 @@ class TriggerCondition:
         except (KeyError, TypeError):
             return False
 
+        # If value is None, condition is not met
+        if current is None:
+            return False
+
         # Evaluate the condition
         if self.operator == "eq":
             return current == self.value

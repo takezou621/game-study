@@ -2,8 +2,8 @@
 
 import yaml
 from typing import Dict, Any, List, Optional
-from ..utils.time import get_timestamp_ms
-from .rules import TriggerRule, TriggerCondition
+from utils.time import get_timestamp_ms
+from trigger.rules import TriggerRule, TriggerCondition
 
 
 class TriggerEngine:

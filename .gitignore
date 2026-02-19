@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/sessions/*
+!logs/sessions/.gitkeep
+
+# Environment variables
+.env
+
+# Test files
+*.mp4
+samples/test_video.mp4

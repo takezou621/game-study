@@ -1,7 +1,7 @@
 """Game State builder from vision detections."""
 
 from typing import Dict, Any, Optional
-from ..utils.time import get_timestamp_ms
+from utils.time import get_timestamp_ms
 
 
 class StateBuilder:
@@ -21,30 +21,30 @@ class StateBuilder:
         return {
             "player": {
                 "status": {
-                    "hp": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "shield": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "is_knocked": {"value": False, "source": None, "confidence": 0.0, "ts_ms": None},
+                    "hp": {"value": 100, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                    "shield": {"value": 0, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                    "is_knocked": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
                 },
                 "weapon": {
-                    "name": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "ammo": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
+                    "name": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "ammo": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
                 },
                 "inventory": {
-                    "materials": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
+                    "materials": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
                 },
             },
             "world": {
                 "storm": {
-                    "phase": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "damage": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "in_storm": {"value": False, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "is_shrinking": {"value": False, "source": None, "confidence": 0.0, "ts_ms": None},
-                    "next_circle_distance": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
+                    "phase": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "damage": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "in_storm": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                    "is_shrinking": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                    "next_circle_distance": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
                 },
             },
             "session": {
-                "phase": {"value": None, "source": None, "confidence": 0.0, "ts_ms": None},
-                "inactivity_duration_ms": {"value": 0, "source": None, "confidence": 1.0, "ts_ms": None},
+                "phase": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                "inactivity_duration_ms": {"value": 0, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
             },
         }
 

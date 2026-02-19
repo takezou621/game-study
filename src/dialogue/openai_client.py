@@ -2,7 +2,12 @@
 
 import os
 from typing import Dict, Any, Optional, List
-from openai import OpenAI
+
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 
 class OpenAIClient:
@@ -22,6 +27,14 @@ class OpenAIClient:
             model: Model to use
             system_prompt_path: Path to system prompt file
         """
+        if not OPENAI_AVAILABLE:
+            self.api_key = None
+            self.model = model
+            self.client = None
+            self.system_prompt = self._load_system_prompt(system_prompt_path)
+            self.conversation_history: List[Dict[str, str]] = []
+            return
+
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model
 
@@ -135,11 +148,15 @@ class OpenAIClient:
             trigger_info: Trigger information
             state: Game state
             movement_state: Movement state
-            max_length: Maximum length
+            max_length: Maximum length in characters
 
         Returns:
             Generated response
         """
+        if not OPENAI_AVAILABLE or self.client is None:
+            # Fallback to default response when OpenAI is not available
+            return f"Response: {trigger_info.get('rule_name', 'Unknown')}"
+
         # Build context
         context = self._build_context(trigger_info, state, movement_state)
 

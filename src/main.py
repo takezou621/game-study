@@ -148,19 +148,16 @@ def main():
                     # Build state from vision
                     # HP detection
                     hp_roi = rois.get("hp_shield")
-                    if hp_roi is not None:
-                        hp_field_loc = roi_extractor.get_field_location(
-                            "hp_shield", "hp", frame.shape[1], frame.shape[0]
-                        )
-                        if hp_field_loc:
-                            hp_region = hp_roi[hp_field_loc[1]:hp_field_loc[3],
-                                             hp_field_loc[0]:hp_field_loc[2]]
-                            hp_result = ocr_detector.extract_hp(hp_region)
+                    if hp_roi is not None and hp_roi.size > 0:
+                        try:
+                            hp_result = ocr_detector.extract_hp(hp_roi)
                             state_builder.update_hp(
                                 hp_result["value"],
                                 hp_result["source"],
                                 hp_result["confidence"]
                             )
+                        except Exception as e:
+                            logger.log_error(f"HP detection error: {e}", e)
 
                     # Shield detection (simplified for MVP)
                     # In full implementation, would extract from hp_shield ROI
