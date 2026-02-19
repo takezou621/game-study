@@ -13,3 +13,6 @@ ultralytics>=8.0.0
 
 # Data Validation
 pydantic>=2.0.0
+
+# Screen Capture (Phase 2)
+mss>=9.0.0
