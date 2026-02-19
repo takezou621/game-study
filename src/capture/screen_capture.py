@@ -4,7 +4,7 @@ import time
 import threading
 import queue
 import numpy as np
-from typing import Optional, Generator, Tuple
+from typing import Optional, Iterator, Tuple
 
 try:
     import mss
@@ -64,7 +64,7 @@ class ScreenCapture(BaseCapture):
 
         # Threading control
         self._running = False
-        self._capture_thread: Optional[threading.Thread] = None
+        self._capture_thread = None
         self._last_frame_time = 0.0
 
         # Statistics
@@ -291,6 +291,9 @@ class ScreenCapture(BaseCapture):
 
     def reset_region(self) -> None:
         """Reset capture region to full screen."""
+        if self.sct is None:
+            return
+
         monitor = self._get_monitor_info(self.monitor)
         if self.monitor_info:
             self.monitor_info["top"] = monitor["top"]
@@ -298,7 +301,7 @@ class ScreenCapture(BaseCapture):
             self.monitor_info["width"] = monitor["width"]
             self.monitor_info["height"] = monitor["height"]
 
-    def __iter__(self) -> Generator[np.ndarray, None, None]:
+    def __iter__(self) -> Iterator[np.ndarray]:
         """
         Iterate through frames.
 

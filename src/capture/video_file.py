@@ -2,11 +2,12 @@
 
 import cv2
 from pathlib import Path
-from typing import Optional, Generator, Tuple
+from typing import Optional, Tuple
 import numpy as np
+from .base import BaseCapture
 
 
-class VideoFileCapture:
+class VideoFileCapture(BaseCapture):
     """Capture frames from video file using OpenCV."""
 
     def __init__(self, video_path: str):
@@ -37,12 +38,14 @@ class VideoFileCapture:
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.is_opened = True
 
     def close(self) -> None:
         """Close video file."""
         if self.cap:
             self.cap.release()
             self.cap = None
+            self.is_opened = False
 
     def read_frame(self) -> Tuple[bool, Optional[np.ndarray]]:
         """
@@ -55,7 +58,19 @@ class VideoFileCapture:
             raise RuntimeError("Video file is not opened. Call open() first.")
 
         ret, frame = self.cap.read()
+        if ret:
+            self._update_fps()
         return ret, frame if ret else None
+
+    def read(self) -> Optional[np.ndarray]:
+        """
+        Read next frame from video.
+
+        Returns:
+            Frame as numpy array or None if failed or ended
+        """
+        ret, frame = self.read_frame()
+        return frame if ret else None
 
     def get_frame_at(self, frame_index: int) -> Optional[np.ndarray]:
         """
@@ -98,11 +113,7 @@ class VideoFileCapture:
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.close()
-
-    def __iter__(self) -> Generator[np.ndarray, None, None]:
+    def __iter__(self):
         """
         Iterate through frames.
 

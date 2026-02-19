@@ -27,3 +27,4 @@ logs/sessions/*
 # Test files
 *.mp4
 samples/test_video.mp4
+test_*.py

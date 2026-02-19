@@ -2,5 +2,6 @@
 
 from .video_file import VideoFileCapture
 from .screen_capture import ScreenCapture
+from .base import BaseCapture
 
-__all__ = ['VideoFileCapture', 'ScreenCapture']
+__all__ = ['VideoFileCapture', 'ScreenCapture', 'BaseCapture']
