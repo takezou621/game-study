@@ -3,6 +3,9 @@
 import asyncio
 import json
 import time
+import hashlib
+import secrets
+import logging
 from typing import Optional, Dict, Any
 import numpy as np
 
@@ -13,6 +16,8 @@ try:
     AIORTC_AVAILABLE = True
 except ImportError:
     AIORTC_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class WebRTCStreamer:
@@ -35,8 +40,8 @@ class WebRTCStreamer:
             port_range: Port range for UDP connections
         """
         if not AIORTC_AVAILABLE:
-            print("Warning: aiortc library not available. Running in mock mode.")
-            print("Install with: pip install aiortc")
+            logger.warning("aiortc library not available. Running in mock mode.")
+            logger.info("Install with: pip install aiortc")
 
         self.stun_servers = stun_servers or [
             "stun:stun.l.google.com:19302"
@@ -114,12 +119,12 @@ class WebRTCStreamer:
             @self.data_channel.on("open")
             async def on_open():
                 self._connected = True
-                print(f"Data channel '{channel_name}' opened")
+                logger.info(f"Data channel '{channel_name}' opened")
 
             @self.data_channel.on("close")
             async def on_close():
                 self._connected = False
-                print(f"Data channel '{channel_name}' closed")
+                logger.info(f"Data channel '{channel_name}' closed")
 
             return self.data_channel
         else:
@@ -153,7 +158,7 @@ class WebRTCStreamer:
             self._bytes_received += len(message)
 
         except json.JSONDecodeError:
-            print(f"Invalid JSON received: {message}")
+            logger.warning("Invalid JSON received")
 
     async def send_state(self, state: Dict[str, Any]) -> bool:
         """
@@ -197,7 +202,7 @@ class WebRTCStreamer:
             return True
 
         except Exception as e:
-            print(f"Failed to send state: {e}")
+            logger.error("Failed to send state", exc_info=True)
             return False
 
     async def send_video_frame(
@@ -214,7 +219,7 @@ class WebRTCStreamer:
             True if sent successfully
         """
         if self.video_track is None:
-            print("Video track not initialized")
+            logger.warning("Video track not initialized")
             return False
 
         try:
@@ -224,7 +229,7 @@ class WebRTCStreamer:
             return True
 
         except Exception as e:
-            print(f"Failed to send video frame: {e}")
+            logger.error("Failed to send video frame", exc_info=True)
             return False
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -270,71 +275,129 @@ class WebRTCStreamer:
             self.pc = None
 
         self._connected = False
-        print("WebRTC connection closed")
+        logger.info("WebRTC connection closed")
 
 
 class WebRTCSignalingServer:
     """
-    Simple signaling server for WebRTC connections.
+    Signaling server for WebRTC connections with token-based authentication.
 
     MVP: Placeholder implementation.
     Full implementation would use WebSocket-based signaling.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080):
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8080,
+        auth_token: Optional[str] = None
+    ):
         """
-        Initialize signaling server.
+        Initialize signaling server with authentication.
 
         Args:
             host: Server host
             port: Server port
+            auth_token: Authentication token (generates random if not provided)
         """
         self.host = host
         self.port = port
+        self.auth_token = auth_token or self._generate_token()
         self.clients = {}
 
-    async def handle_offer(self, offer: dict) -> dict:
+    @staticmethod
+    def _generate_token() -> str:
         """
-        Handle WebRTC offer.
+        Generate a secure random authentication token.
+
+        Returns:
+            Hex-encoded token
+        """
+        return secrets.token_hex(32)
+
+    def validate_token(self, token: str) -> bool:
+        """
+        Validate authentication token using constant-time comparison.
+
+        Args:
+            token: Token to validate
+
+        Returns:
+            True if token is valid
+        """
+        if not token:
+            return False
+
+        # Use constant-time comparison to prevent timing attacks
+        return secrets.compare_digest(token, self.auth_token)
+
+    async def handle_offer(self, offer: dict, token: str) -> dict:
+        """
+        Handle WebRTC offer with authentication.
 
         Args:
             offer: SDP offer
+            token: Authentication token
 
         Returns:
-            SDP answer
+            SDP answer or error
+
+        Raises:
+            PermissionError if token is invalid
         """
+        if not self.validate_token(token):
+            logger.warning("Unauthorized offer attempt")
+            raise PermissionError("Invalid authentication token")
+
         # In full implementation, this would create a peer connection
         # and generate an answer
-        print(f"Received offer from client")
+        logger.info("Received authenticated offer from client")
         return {"status": "received"}
 
-    async def handle_answer(self, answer: dict):
+    async def handle_answer(self, answer: dict, token: str):
         """
-        Handle WebRTC answer.
+        Handle WebRTC answer with authentication.
 
         Args:
             answer: SDP answer
-        """
-        print(f"Received answer from client")
+            token: Authentication token
 
-    async def handle_ice_candidate(self, candidate: dict):
+        Raises:
+            PermissionError if token is invalid
         """
-        Handle ICE candidate.
+        if not self.validate_token(token):
+            logger.warning("Unauthorized answer attempt")
+            raise PermissionError("Invalid authentication token")
+
+        logger.info("Received authenticated answer from client")
+
+    async def handle_ice_candidate(self, candidate: dict, token: str):
+        """
+        Handle ICE candidate with authentication.
 
         Args:
             candidate: ICE candidate
+            token: Authentication token
+
+        Raises:
+            PermissionError if token is invalid
         """
-        print(f"Received ICE candidate from client")
+        if not self.validate_token(token):
+            logger.warning("Unauthorized ICE candidate attempt")
+            raise PermissionError("Invalid authentication token")
+
+        logger.debug("Received authenticated ICE candidate from client")
 
     def get_statistics(self) -> dict:
         """
         Get server statistics.
 
         Returns:
-            Statistics dictionary
+            Statistics dictionary (without exposing the token)
         """
         return {
             "host": self.host,
             "port": self.port,
             "clients": len(self.clients),
+            "auth_enabled": True,
         }

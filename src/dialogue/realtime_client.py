@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+import logging
 from typing import Optional, Dict, Any, Callable, List
 import numpy as np
 
@@ -21,6 +22,12 @@ try:
 except ImportError:
     SOUNDDEVICE_AVAILABLE = False
 
+from ..utils.rate_limiter import RateLimiter
+from ..utils.exceptions import APIError
+from ..utils.retry import retry_with_backoff
+
+logger = logging.getLogger(__name__)
+
 
 class RealtimeVoiceClient:
     """
@@ -34,7 +41,9 @@ class RealtimeVoiceClient:
         api_key: Optional[str] = None,
         model: str = "gpt-4o-realtime-preview",
         system_prompt_path: Optional[str] = None,
-        voice: str = "alloy"
+        voice: str = "alloy",
+        rate_limit_calls: int = 30,
+        rate_limit_period: float = 60.0,
     ):
         """
         Initialize Realtime voice client.
@@ -44,6 +53,8 @@ class RealtimeVoiceClient:
             model: Model to use
             system_prompt_path: Path to system prompt file
             voice: Voice to use (alloy, echo, etc.)
+            rate_limit_calls: Maximum API calls per period
+            rate_limit_period: Time period for rate limiting (seconds)
         """
         if not OPENAI_AVAILABLE:
             raise ImportError(
@@ -51,7 +62,8 @@ class RealtimeVoiceClient:
                 "Install with: pip install openai"
             )
 
-        self.api_key = api_key
+        # Store API key for later use when connecting, but keep it internal
+        self._api_key = api_key
         self.model = model
         self.voice = voice
         self.system_prompt = self._load_system_prompt(system_prompt_path)
@@ -63,6 +75,13 @@ class RealtimeVoiceClient:
         # OpenAI client
         self.client: Optional[openai.AsyncOpenAI] = None
         self.realtime: Optional[openai.AsyncRealtime] = None
+
+        # Rate limiter for API calls
+        self.rate_limiter = RateLimiter(
+            max_calls=rate_limit_calls,
+            period_seconds=rate_limit_period,
+            name=f"Realtime.{model}"
+        )
 
         # Audio buffers
         self._audio_input_buffer: List[float] = []
@@ -98,7 +117,7 @@ class RealtimeVoiceClient:
                 with open(path, 'r') as f:
                     return f.read()
             except Exception as e:
-                print(f"Failed to load system prompt: {e}")
+                logger.error("Failed to load system prompt", exc_info=True)
 
         # Default system prompt
         return """You are an AI English teacher and gaming coach for Fortnite players. Your goal is to help players improve their English skills while playing the game naturally.
@@ -132,11 +151,11 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
         Raises:
             RuntimeError if API key is not set
         """
-        api_key = self.api_key or openai.api_key
+        api_key = self._api_key or openai.api_key
         if not api_key:
             raise RuntimeError("OpenAI API key is required")
 
-        # Initialize AsyncOpenAI client
+        # Initialize AsyncOpenAI client with api_key directly
         self.client = openai.AsyncOpenAI(api_key=api_key)
 
         # Connect to Realtime API
@@ -149,7 +168,7 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
         )
 
         self._connected = True
-        print(f"Connected to OpenAI Realtime API (model: {self.model})")
+        logger.info(f"Connected to OpenAI Realtime API (model: {self.model})")
 
     async def disconnect(self):
         """Disconnect from OpenAI Realtime API."""
@@ -158,7 +177,7 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
             self.realtime = None
 
         self._connected = False
-        print("Disconnected from OpenAI Realtime API")
+        logger.info("Disconnected from OpenAI Realtime API")
 
     async def send_audio(self, audio_data: np.ndarray) -> bool:
         """
@@ -172,6 +191,12 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
         """
         if not self._connected or self.realtime is None:
             return False
+
+        # Check rate limit
+        if not self.rate_limiter.allow_call():
+            wait_time = self.rate_limiter.wait_time()
+            logger.warning(f"Rate limit reached, waiting {wait_time:.2f}s")
+            await asyncio.sleep(wait_time)
 
         try:
             # Convert to float32 if needed
@@ -194,7 +219,7 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
             return True
 
         except Exception as e:
-            print(f"Failed to send audio: {e}")
+            logger.error("Failed to send audio", exc_info=True)
             return False
 
     async def send_text(self, text: str) -> bool:
@@ -210,12 +235,18 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
         if not self._connected or self.realtime is None:
             return False
 
+        # Check rate limit
+        if not self.rate_limiter.allow_call():
+            wait_time = self.rate_limiter.wait_time()
+            logger.warning(f"Rate limit reached, waiting {wait_time:.2f}s")
+            await asyncio.sleep(wait_time)
+
         try:
             await self.realtime.send_text(text)
             return True
 
         except Exception as e:
-            print(f"Failed to send text: {e}")
+            logger.error("Failed to send text", exc_info=True)
             return False
 
     def on_audio_delta(self, callback: Callable):
@@ -252,7 +283,7 @@ Remember: The player is here to learn English while gaming. Keep it fun, practic
         Stops current TTS output.
         """
         self._interrupt_requested = True
-        print("Speech interrupted")
+        logger.debug("Speech interrupted")
 
     def reset_interrupt(self):
         """Reset interrupt flag."""
