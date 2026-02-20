@@ -88,8 +88,8 @@ def parse_args():
         "--voice-model",
         type=str,
         default="tts-1",
-        choices=["tts-1", "tts-1-hd"],
-        help="Voice model to use"
+        choices=["tts-1", "tts-1-hd", "realtime"],
+        help="Voice model to use (realtime for Realtime API)"
     )
 
     return parser.parse_args()
@@ -149,9 +149,14 @@ def main():
         try:
             voice_client = RealtimeVoiceClient(
                 system_prompt_path=str(system_prompt_path),
-                enable_audio_output=True
+                enable_audio_output=True,
+                use_realtime_api=args.voice_model == "realtime"
             )
             logger.info("Realtime voice client initialized.")
+            if voice_client.use_realtime_api:
+                logger.info("Using OpenAI Realtime API (WebSocket)")
+            else:
+                logger.info("Using OpenAI TTS API (fallback)")
         except Exception as e:
             logger.warning(f"Voice client not initialized: {e}")
             logger.info("Continuing with text-only mode.")
@@ -281,6 +286,11 @@ def main():
 
             except KeyboardInterrupt:
                 logger.info(f"Stopped at frame {frame_count}")
+
+            finally:
+                # Cleanup voice client
+                if voice_client:
+                    voice_client.shutdown()
 
             logger.info("Processing complete!")
             logger.info(f"Total frames: {frame_count}")
