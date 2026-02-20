@@ -1,5 +1,6 @@
 """OpenAI API client for generating AI coach responses."""
 
+import logging
 import os
 from typing import Dict, Any, Optional, List
 
@@ -8,6 +9,8 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIClient:
@@ -27,23 +30,21 @@ class OpenAIClient:
             model: Model to use
             system_prompt_path: Path to system prompt file
         """
-        if not OPENAI_AVAILABLE:
-            self.api_key = None
-            self.model = model
-            self.client = None
-            self.system_prompt = self._load_system_prompt(system_prompt_path)
-            self.conversation_history: List[Dict[str, str]] = []
-            return
-
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model
-
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
-
-        self.client = OpenAI(api_key=self.api_key)
         self.system_prompt = self._load_system_prompt(system_prompt_path)
         self.conversation_history: List[Dict[str, str]] = []
+
+        if not OPENAI_AVAILABLE:
+            self.client = None
+            return
+
+        # Get API key and pass directly to client (do not store)
+        resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
+
+        if not resolved_api_key:
+            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
+
+        self.client = OpenAI(api_key=resolved_api_key)
 
     def _load_system_prompt(self, path: Optional[str]) -> str:
         """
@@ -182,8 +183,9 @@ class OpenAIClient:
             return response_text
 
         except Exception as e:
-            # Fallback response on error
-            return f"Response generation failed: {str(e)}"
+            # Log detailed error internally, return sanitized message
+            logger.error("Response generation failed", exc_info=True)
+            return "Response generation failed. Please try again."
 
     def _build_context(
         self,

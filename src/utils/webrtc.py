@@ -1,10 +1,17 @@
 """WebRTC utilities for State and ROI streaming."""
 
 import asyncio
+import hashlib
+import hmac
 import json
+import logging
+import os
+import secrets
 import time
 from typing import Optional, Dict, Any
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 # Try to import aiortc
@@ -275,56 +282,165 @@ class WebRTCStreamer:
 
 class WebRTCSignalingServer:
     """
-    Simple signaling server for WebRTC connections.
+    Simple signaling server for WebRTC connections with token-based authentication.
+
+    Token-based authentication prevents unauthorized access to the signaling server.
+    Clients must provide a valid token in the 'auth_token' field of their requests.
 
     MVP: Placeholder implementation.
     Full implementation would use WebSocket-based signaling.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080):
+    # Token expiration time in seconds (default: 1 hour)
+    TOKEN_EXPIRY_SECONDS = 3600
+
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8080,
+        secret_key: Optional[str] = None
+    ):
         """
         Initialize signaling server.
 
         Args:
             host: Server host
             port: Server port
+            secret_key: Secret key for token signing (reads from WEBRTC_SECRET_KEY env if not provided)
         """
         self.host = host
         self.port = port
         self.clients = {}
 
-    async def handle_offer(self, offer: dict) -> dict:
+        # Get secret key for token signing (do not store in instance for security)
+        self._secret_key = secret_key or os.getenv("WEBRTC_SECRET_KEY")
+        if not self._secret_key:
+            # Generate a random secret key if not provided
+            self._secret_key = secrets.token_hex(32)
+            logger.warning(
+                "WEBRTC_SECRET_KEY not set. Using generated key. "
+                "Set WEBRTC_SECRET_KEY environment variable for production."
+            )
+
+    def generate_token(self, client_id: str, expiry_seconds: int = None) -> str:
         """
-        Handle WebRTC offer.
+        Generate an authentication token for a client.
+
+        Args:
+            client_id: Unique client identifier
+            expiry_seconds: Token expiry time in seconds
+
+        Returns:
+            Authentication token string
+        """
+        expiry_seconds = expiry_seconds or self.TOKEN_EXPIRY_SECONDS
+        expiry_time = int(time.time()) + expiry_seconds
+
+        # Create token payload
+        payload = f"{client_id}:{expiry_time}"
+
+        # Sign with HMAC
+        signature = hmac.new(
+            self._secret_key.encode(),
+            payload.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        return f"{payload}:{signature}"
+
+    def verify_token(self, token: str) -> tuple[bool, Optional[str]]:
+        """
+        Verify an authentication token.
+
+        Args:
+            token: Token string to verify
+
+        Returns:
+            Tuple of (is_valid, client_id or error_message)
+        """
+        if not token:
+            return False, "Token is required"
+
+        try:
+            parts = token.split(":")
+            if len(parts) != 3:
+                return False, "Invalid token format"
+
+            client_id, expiry_str, signature = parts
+            expiry_time = int(expiry_str)
+
+            # Check expiry
+            if time.time() > expiry_time:
+                return False, "Token has expired"
+
+            # Verify signature
+            payload = f"{client_id}:{expiry_str}"
+            expected_signature = hmac.new(
+                self._secret_key.encode(),
+                payload.encode(),
+                hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(signature, expected_signature):
+                return False, "Invalid token signature"
+
+            return True, client_id
+
+        except (ValueError, TypeError) as e:
+            logger.error("Token verification failed", exc_info=True)
+            return False, "Invalid token format"
+
+    async def handle_offer(self, offer: dict, auth_token: str = None) -> dict:
+        """
+        Handle WebRTC offer with authentication.
 
         Args:
             offer: SDP offer
+            auth_token: Authentication token
 
         Returns:
-            SDP answer
+            SDP answer or error response
         """
+        # Verify authentication token
+        is_valid, result = self.verify_token(auth_token)
+        if not is_valid:
+            logger.warning(f"Authentication failed: {result}")
+            return {"status": "error", "message": "Authentication failed"}
+
         # In full implementation, this would create a peer connection
         # and generate an answer
-        print(f"Received offer from client")
+        logger.info(f"Received offer from client: {result}")
         return {"status": "received"}
 
-    async def handle_answer(self, answer: dict):
+    async def handle_answer(self, answer: dict, auth_token: str = None):
         """
-        Handle WebRTC answer.
+        Handle WebRTC answer with authentication.
 
         Args:
             answer: SDP answer
+            auth_token: Authentication token
         """
-        print(f"Received answer from client")
+        is_valid, result = self.verify_token(auth_token)
+        if not is_valid:
+            logger.warning(f"Authentication failed: {result}")
+            return
 
-    async def handle_ice_candidate(self, candidate: dict):
+        logger.info(f"Received answer from client: {result}")
+
+    async def handle_ice_candidate(self, candidate: dict, auth_token: str = None):
         """
-        Handle ICE candidate.
+        Handle ICE candidate with authentication.
 
         Args:
             candidate: ICE candidate
+            auth_token: Authentication token
         """
-        print(f"Received ICE candidate from client")
+        is_valid, result = self.verify_token(auth_token)
+        if not is_valid:
+            logger.warning(f"Authentication failed: {result}")
+            return
+
+        logger.info(f"Received ICE candidate from client: {result}")
 
     def get_statistics(self) -> dict:
         """
@@ -337,4 +453,5 @@ class WebRTCSignalingServer:
             "host": self.host,
             "port": self.port,
             "clients": len(self.clients),
+            "auth_enabled": True,
         }

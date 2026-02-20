@@ -1,5 +1,6 @@
 """OpenAI Realtime API client for voice conversation."""
 
+import logging
 import os
 import asyncio
 import json
@@ -12,6 +13,8 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,57 +70,37 @@ class RealtimeVoiceClient:
             max_response_length_ms: Maximum response duration
             enable_audio_output: Enable audio output (True) or text-only (False)
         """
-        if not OPENAI_AVAILABLE:
-            self.client = None
-            self.enabled = False
-            self.api_key = None
-            self.model = model
-            self.voice = voice
-            self.system_prompt = self._load_system_prompt(system_prompt_path)
-            self.cooldown_ms = cooldown_ms
-            self.max_response_length_ms = max_response_length_ms
-            self.enable_audio_output = enable_audio_output
-            self.session = None
-            self.is_speaking = False
-            self.last_spoken_time = 0.0
-            self.response_queue = None
-            self.interrupt_requested = False
-            self.loop = None
-            return
-
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            self.enabled = False
-            self.client = None
-            self.model = model
-            self.voice = voice
-            self.system_prompt = self._load_system_prompt(system_prompt_path)
-            self.cooldown_ms = cooldown_ms
-            self.max_response_length_ms = max_response_length_ms
-            self.enable_audio_output = enable_audio_output
-            self.session = None
-            self.is_speaking = False
-            self.last_spoken_time = 0.0
-            self.response_queue = None
-            self.interrupt_requested = False
-            self.loop = None
-            return
-
-        self.client = AsyncOpenAI(api_key=self.api_key)
+        # Initialize common attributes
         self.model = model
         self.voice = voice
         self.system_prompt = self._load_system_prompt(system_prompt_path)
         self.cooldown_ms = cooldown_ms
         self.max_response_length_ms = max_response_length_ms
         self.enable_audio_output = enable_audio_output
+        self.session = None
+        self.is_speaking = False
+        self.last_spoken_time = 0.0
+        self.response_queue: Optional[asyncio.Queue[VoiceResponse]] = None
+        self.interrupt_requested = False
+        self.loop = None
+
+        if not OPENAI_AVAILABLE:
+            self.client = None
+            self.enabled = False
+            return
+
+        # Get API key and pass directly to client (do not store)
+        resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not resolved_api_key:
+            self.enabled = False
+            self.client = None
+            return
+
+        self.client = AsyncOpenAI(api_key=resolved_api_key)
 
         # State management
         self.enabled = True
-        self.session: Optional[Any] = None
-        self.is_speaking = False
-        self.last_spoken_time = 0.0
-        self.response_queue: asyncio.Queue[VoiceResponse] = asyncio.Queue()
-        self.interrupt_requested = False
+        self.response_queue = asyncio.Queue()
 
         # Event loop for async operations
         self.loop = asyncio.new_event_loop()
@@ -182,8 +165,8 @@ P3 - Small talk: "How's it going?"
 
             return True
 
-        except Exception as e:
-            print(f"Failed to initialize Realtime session: {e}")
+        except Exception:
+            logger.error("Failed to initialize Realtime session", exc_info=True)
             return False
 
     def speak(
@@ -226,8 +209,8 @@ P3 - Small talk: "How's it going?"
             )
             self.last_spoken_time = time.time()
             return response
-        except Exception as e:
-            print(f"Speech generation failed: {e}")
+        except Exception:
+            logger.error("Speech generation failed", exc_info=True)
             return VoiceResponse(text=text)
 
     async def _generate_speech(self, text: str) -> VoiceResponse:
@@ -246,10 +229,8 @@ P3 - Small talk: "How's it going?"
         try:
             # Use OpenAI's TTS API as MVP
             # In Phase 2+, we'll use Realtime API directly
-            from openai import AsyncOpenAI
-            tts_client = AsyncOpenAI(api_key=self.api_key)
-
-            response = await tts_client.audio.speech.create(
+            # Use the existing client instead of creating a new one
+            response = await self.client.audio.speech.create(
                 model="tts-1",
                 voice=self.voice,
                 input=text[:500]  # Limit text length
@@ -263,8 +244,8 @@ P3 - Small talk: "How's it going?"
                 duration_ms=len(audio_data) // 32  # Approximate for 16kHz
             )
 
-        except Exception as e:
-            print(f"TTS generation failed: {e}")
+        except Exception:
+            logger.error("TTS generation failed", exc_info=True)
             return VoiceResponse(text=text)
 
     def speak_with_trigger(
