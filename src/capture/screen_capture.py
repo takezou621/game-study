@@ -3,6 +3,7 @@
 import time
 import threading
 import queue
+import logging
 import numpy as np
 from typing import Optional, Iterator, Tuple
 
@@ -13,6 +14,9 @@ except Exception:
     MSS_AVAILABLE = False
 
 from .base import BaseCapture
+from ..utils.exceptions import CaptureError
+
+logger = logging.getLogger(__name__)
 
 
 class ScreenCapture(BaseCapture):
@@ -182,8 +186,9 @@ class ScreenCapture(BaseCapture):
             return frame
 
         except Exception as e:
-            # Capture failed
-            return None
+            # Log the error instead of silently swallowing it
+            logger.error("Frame capture failed", exc_info=True)
+            raise CaptureError(f"Screen capture failed: {str(e)}") from e
 
     def read(self) -> Optional[np.ndarray]:
         """
