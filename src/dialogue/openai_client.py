@@ -12,6 +12,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Import constants with fallback for standalone usage
+try:
+    from constants import MAX_RESPONSE_CHARS
+except ImportError:
+    MAX_RESPONSE_CHARS = 200
+
 
 class OpenAIClient:
     """OpenAI client for generating AI coach responses."""
@@ -88,7 +94,7 @@ class OpenAIClient:
         trigger_info: Dict[str, Any],
         state: Dict[str, Any],
         movement_state: str,
-        max_length: int = 200
+        max_length: int = MAX_RESPONSE_CHARS
     ) -> str:
         """
         Generate AI response based on trigger and state.

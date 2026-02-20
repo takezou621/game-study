@@ -13,6 +13,18 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Import constants with fallback for standalone usage
+try:
+    from constants import (
+        MAX_STATE_BUFFER_SIZE,
+        WEBRTC_DEFAULT_PORT,
+        WEBRTC_TOKEN_EXPIRY_SECONDS,
+    )
+except ImportError:
+    MAX_STATE_BUFFER_SIZE = 100
+    WEBRTC_DEFAULT_PORT = 8080
+    WEBRTC_TOKEN_EXPIRY_SECONDS = 3600
+
 
 # Try to import aiortc
 try:
@@ -42,8 +54,8 @@ class WebRTCStreamer:
             port_range: Port range for UDP connections
         """
         if not AIORTC_AVAILABLE:
-            print("Warning: aiortc library not available. Running in mock mode.")
-            print("Install with: pip install aiortc")
+            logger.warning("aiortc library not available. Running in mock mode.")
+            logger.info("Install with: pip install aiortc")
 
         self.stun_servers = stun_servers or [
             "stun:stun.l.google.com:19302"
@@ -57,7 +69,7 @@ class WebRTCStreamer:
 
         # State buffering
         self.state_buffer: list = []
-        self.max_state_buffer = 100
+        self.max_state_buffer = MAX_STATE_BUFFER_SIZE
 
         # Statistics
         self._connected = False
@@ -121,12 +133,12 @@ class WebRTCStreamer:
             @self.data_channel.on("open")
             async def on_open():
                 self._connected = True
-                print(f"Data channel '{channel_name}' opened")
+                logger.info(f"Data channel '{channel_name}' opened")
 
             @self.data_channel.on("close")
             async def on_close():
                 self._connected = False
-                print(f"Data channel '{channel_name}' closed")
+                logger.info(f"Data channel '{channel_name}' closed")
 
             return self.data_channel
         else:
@@ -160,7 +172,7 @@ class WebRTCStreamer:
             self._bytes_received += len(message)
 
         except json.JSONDecodeError:
-            print(f"Invalid JSON received: {message}")
+            logger.warning(f"Invalid JSON received: {message}")
 
     async def send_state(self, state: Dict[str, Any]) -> bool:
         """
@@ -204,7 +216,7 @@ class WebRTCStreamer:
             return True
 
         except Exception as e:
-            print(f"Failed to send state: {e}")
+            logger.error(f"Failed to send state: {e}")
             return False
 
     async def send_video_frame(
@@ -221,7 +233,7 @@ class WebRTCStreamer:
             True if sent successfully
         """
         if self.video_track is None:
-            print("Video track not initialized")
+            logger.warning("Video track not initialized")
             return False
 
         try:
@@ -231,7 +243,7 @@ class WebRTCStreamer:
             return True
 
         except Exception as e:
-            print(f"Failed to send video frame: {e}")
+            logger.error(f"Failed to send video frame: {e}")
             return False
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -277,7 +289,7 @@ class WebRTCStreamer:
             self.pc = None
 
         self._connected = False
-        print("WebRTC connection closed")
+        logger.info("WebRTC connection closed")
 
 
 class WebRTCSignalingServer:
@@ -291,13 +303,13 @@ class WebRTCSignalingServer:
     Full implementation would use WebSocket-based signaling.
     """
 
-    # Token expiration time in seconds (default: 1 hour)
-    TOKEN_EXPIRY_SECONDS = 3600
+    # Token expiration time in seconds
+    TOKEN_EXPIRY_SECONDS = WEBRTC_TOKEN_EXPIRY_SECONDS
 
     def __init__(
         self,
         host: str = "0.0.0.0",
-        port: int = 8080,
+        port: int = WEBRTC_DEFAULT_PORT,
         secret_key: Optional[str] = None
     ):
         """

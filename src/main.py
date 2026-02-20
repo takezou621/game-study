@@ -2,10 +2,18 @@
 """Main entry point for game-study."""
 
 import argparse
+import logging
 import sys
 import os
 from pathlib import Path
 from typing import Optional
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -22,6 +30,12 @@ from dialogue.openai_client import OpenAIClient
 from dialogue.realtime_client import RealtimeVoiceClient
 from utils.logger import SessionLogger
 from utils.time import get_timestamp_ms
+from constants import (
+    DEFAULT_ROI_CONFIG,
+    DEFAULT_TRIGGERS_CONFIG,
+    DEFAULT_SYSTEM_PROMPT,
+    LOG_INTERVAL_FRAMES,
+)
 
 
 def parse_args():
@@ -44,13 +58,13 @@ def parse_args():
     parser.add_argument(
         "--triggers",
         type=str,
-        default="./configs/triggers.yaml",
+        default=DEFAULT_TRIGGERS_CONFIG,
         help="Path to triggers config file"
     )
     parser.add_argument(
         "--roi",
         type=str,
-        default="./configs/roi_defaults.yaml",
+        default=DEFAULT_ROI_CONFIG,
         help="Path to ROI config file"
     )
     parser.add_argument(
@@ -62,7 +76,7 @@ def parse_args():
     parser.add_argument(
         "--system-prompt",
         type=str,
-        default="./configs/prompts/system.txt",
+        default=DEFAULT_SYSTEM_PROMPT,
         help="Path to system prompt file"
     )
     parser.add_argument(
@@ -94,15 +108,15 @@ def main():
     system_prompt_path = Path(args.system_prompt)
 
     if not roi_config_path.exists():
-        print(f"Error: ROI config not found: {roi_config_path}")
+        logger.error(f"ROI config not found: {roi_config_path}")
         sys.exit(1)
 
     if not triggers_config_path.exists():
-        print(f"Error: Triggers config not found: {triggers_config_path}")
+        logger.error(f"Triggers config not found: {triggers_config_path}")
         sys.exit(1)
 
     # Initialize components
-    print("Initializing components...")
+    logger.info("Initializing components...")
 
     # Vision components
     roi_extractor = ROIExtractor(str(roi_config_path))
@@ -112,7 +126,7 @@ def main():
     state_builder = StateBuilder()
 
     # Trigger engine
-    print("Loading trigger rules...")
+    logger.info("Loading trigger rules...")
     trigger_engine = TriggerEngine(str(triggers_config_path))
 
     # Dialogue
@@ -123,10 +137,10 @@ def main():
         openai_client = OpenAIClient(
             system_prompt_path=str(system_prompt_path)
         )
-        print("OpenAI client initialized.")
+        logger.info("OpenAI client initialized.")
     except ValueError as e:
-        print(f"Warning: OpenAI client not initialized: {e}")
-        print("Continuing with template-only mode.")
+        logger.warning(f"OpenAI client not initialized: {e}")
+        logger.info("Continuing with template-only mode.")
         openai_client = None
 
     # Realtime voice client (optional - Phase 2)
@@ -137,29 +151,29 @@ def main():
                 system_prompt_path=str(system_prompt_path),
                 enable_audio_output=True
             )
-            print("Realtime voice client initialized.")
+            logger.info("Realtime voice client initialized.")
         except Exception as e:
-            print(f"Warning: Voice client not initialized: {e}")
-            print("Continuing with text-only mode.")
+            logger.warning(f"Voice client not initialized: {e}")
+            logger.info("Continuing with text-only mode.")
 
     # Video capture
     if args.input == "video":
         if not args.video:
-            print("Error: --video argument required for video input")
+            logger.error("--video argument required for video input")
             sys.exit(1)
 
         if not Path(args.video).exists():
-            print(f"Error: Video file not found: {args.video}")
+            logger.error(f"Video file not found: {args.video}")
             sys.exit(1)
 
-        print(f"Opening video: {args.video}")
+        logger.info(f"Opening video: {args.video}")
         with VideoFileCapture(args.video) as capture:
             metadata = capture.get_metadata()
-            print(f"Video metadata: {metadata}")
+            logger.info(f"Video metadata: {metadata}")
 
             # Process frames
-            print("\nProcessing frames...")
-            print("Press Ctrl+C to stop")
+            logger.info("Processing frames...")
+            logger.info("Press Ctrl+C to stop")
 
             frame_count = 0
             total_triggers = 0
@@ -211,7 +225,7 @@ def main():
 
                     if trigger_result:
                         total_triggers += 1
-                        print(f"[{frame_count}] Trigger: {trigger_result['rule_name']}")
+                        logger.info(f"[{frame_count}] Trigger: {trigger_result['rule_name']}")
 
                         # Generate response
                         template = trigger_result['template']
@@ -226,9 +240,9 @@ def main():
                                     movement_state
                                 )
                             except Exception as e:
-                                print(f"OpenAI error: {e}, using template")
+                                logger.warning(f"OpenAI error: {e}, using template")
 
-                        print(f"  Response: {response_text}")
+                        logger.info(f"  Response: {response_text}")
 
                         # Voice output (Phase 2)
                         voice_response = None
@@ -240,9 +254,9 @@ def main():
                                     movement_state
                                 )
                                 if voice_response:
-                                    print(f"  Voice: generated ({voice_response.duration_ms}ms)")
+                                    logger.debug(f"  Voice: generated ({voice_response.duration_ms}ms)")
                             except Exception as e:
-                                print(f"Voice error: {e}")
+                                logger.warning(f"Voice error: {e}")
 
                         # Log trigger and response
                         logger.log_trigger({
@@ -261,17 +275,17 @@ def main():
                             "voice_duration_ms": voice_response.duration_ms if voice_response else None,
                         })
 
-                    # Progress update every 100 frames
-                    if frame_count % 100 == 0:
-                        print(f"Processed {frame_count} frames, {total_triggers} triggers")
+                    # Progress update every N frames
+                    if frame_count % LOG_INTERVAL_FRAMES == 0:
+                        logger.info(f"Processed {frame_count} frames, {total_triggers} triggers")
 
             except KeyboardInterrupt:
-                print(f"\nStopped at frame {frame_count}")
+                logger.info(f"Stopped at frame {frame_count}")
 
-            print(f"\nProcessing complete!")
-            print(f"Total frames: {frame_count}")
-            print(f"Total triggers: {total_triggers}")
-            print(f"Logs saved to: {args.out}")
+            logger.info("Processing complete!")
+            logger.info(f"Total frames: {frame_count}")
+            logger.info(f"Total triggers: {total_triggers}")
+            logger.info(f"Logs saved to: {args.out}")
 
 
 if __name__ == "__main__":

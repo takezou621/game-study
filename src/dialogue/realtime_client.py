@@ -16,6 +16,18 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Import constants with fallback for standalone usage
+try:
+    from constants import (
+        DEFAULT_COOLDOWN_MS,
+        DEFAULT_MAX_RESPONSE_LENGTH_MS,
+        MAX_TEXT_LENGTH,
+    )
+except ImportError:
+    DEFAULT_COOLDOWN_MS = 3000
+    DEFAULT_MAX_RESPONSE_LENGTH_MS = 10000
+    MAX_TEXT_LENGTH = 500
+
 
 @dataclass
 class VoiceResponse:
@@ -54,8 +66,8 @@ class RealtimeVoiceClient:
         model: str = "gpt-4o-realtime-preview-2024-10-01",
         voice: str = "alloy",
         system_prompt_path: Optional[str] = None,
-        cooldown_ms: int = 3000,  # Minimum time between responses
-        max_response_length_ms: int = 10000,  # Maximum response duration
+        cooldown_ms: int = DEFAULT_COOLDOWN_MS,
+        max_response_length_ms: int = DEFAULT_MAX_RESPONSE_LENGTH_MS,
         enable_audio_output: bool = True
     ):
         """
@@ -233,7 +245,7 @@ P3 - Small talk: "How's it going?"
             response = await self.client.audio.speech.create(
                 model="tts-1",
                 voice=self.voice,
-                input=text[:500]  # Limit text length
+                input=text[:MAX_TEXT_LENGTH]
             )
 
             audio_data = await response.aread()
