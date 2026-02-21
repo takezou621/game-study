@@ -175,6 +175,87 @@ def session_logger(temp_dir: Path):
 
 
 @pytest.fixture
+def temp_session_dir(temp_dir: Path):
+    """Create a temporary session directory (alias for temp_dir for compatibility)."""
+    return temp_dir
+
+
+@pytest.fixture
+def sample_triggers_config_path(temp_dir: Path):
+    """Create a sample triggers config file."""
+    config_content = """
+triggers:
+  - id: low_hp_alert
+    name: Low HP Alert
+    priority: 0
+    enabled: true
+    conditions:
+      - field: player.status.hp.value
+        operator: lt
+        value: 30
+    templates:
+      combat: "Low HP! Heal!"
+      non_combat: "Your HP is low. Consider healing."
+    cooldown_ms: 5000
+
+  - id: knocked_alert
+    name: Knocked Alert
+    priority: 0
+    enabled: true
+    conditions:
+      - field: player.status.is_knocked.value
+        operator: eq
+        value: true
+    templates:
+      combat: "Down! Need revive!"
+      non_combat: "You're down. Wait for revive."
+    cooldown_ms: 3000
+
+  - id: storm_alert
+    name: Storm Alert
+    priority: 0
+    enabled: true
+    conditions:
+      - field: world.storm.in_storm.value
+        operator: eq
+        value: true
+    templates:
+      combat: "Storm! Move!"
+      non_combat: "You're in the storm. Get to safety."
+    cooldown_ms: 3000
+
+  - id: storm_shrinking
+    name: Storm Shrinking
+    priority: 1
+    enabled: true
+    conditions:
+      - field: world.storm.is_shrinking.value
+        operator: eq
+        value: true
+    templates:
+      combat: "Storm closing!"
+      non_combat: "The storm is closing in. Rotate now."
+    cooldown_ms: 10000
+
+  - id: inactivity_reminder
+    name: Inactivity Reminder
+    priority: 3
+    enabled: true
+    conditions:
+      - field: session.inactivity_duration_ms.value
+        operator: gte
+        value: 30000
+    templates:
+      combat: null
+      non_combat: "You've been quiet. Everything okay?"
+    cooldown_ms: 60000
+"""
+    config_path = temp_dir / "triggers.yaml"
+    config_path.write_text(config_content)
+    return config_path
+
+
+@pytest.fixture
 def webrtc_server():
     """Create a WebRTCSignalingServer instance."""
     from utils.webrtc import WebRTCSignalingServer
