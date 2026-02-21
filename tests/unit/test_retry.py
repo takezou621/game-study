@@ -224,7 +224,7 @@ class TestRetryContext:
 
     def test_get_delay(self):
         """Test get_delay returns positive value."""
-        with RetryContext(max_retries=3, base_delay=1.0) as retry:
+        with RetryContext(max_retries=3, base_delay=1.0, jitter=False) as retry:
             retry.attempt = 1
             delay = retry.get_delay()
             assert delay > 0

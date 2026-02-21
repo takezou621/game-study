@@ -8,31 +8,51 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 
 ---
 
-## 1. できること（MVP）
+## 1. できること（MVP + Phase 2/3）
 
 - 入力：Fortniteの映像
   - 録画ファイル（mp4等）
-  - 配信映像（将来）
-  - リアルタイム画面（将来：PCキャプチャ/キャプチャカード）
-- HUD ROI解析（正規化ROI + 初回キャリブレーション予定）
+  - PC画面リアルタイムキャプチャ
+  - 将来：配信映像、キャプチャカード
+
+- HUD ROI解析（正規化ROI + 自動キャリブレーション）
   - HP/Shield（左下）
   - Minimap/Storm（右上）
   - Knocked/Revive通知（中央）
   - 武器/弾/資材（右下）
+  - 回復/建築/移動の検出
+
 - Game State(JSON)生成（`value/source/confidence/ts` 付き）
+
 - YAMLトリガーエンジン
   - P0（生存）> P1（戦術）> P2（学習）> P3（雑談）
   - `movement_state=combat` では P2/P3 を抑制
   - クールダウン、割り込み抑止、最大発話長制限
-- OpenAI Realtime APIによる音声応答（最初は「テキスト返答」でも動作可）
+
+- 音声機能
+  - 音声出力（OpenAI TTS/Realtime API）
+  - 音声入力（VAD + Whisper STT）
+  - エコー/クロストーク検出
+
+- レビュー・分析機能
+  - セッション統計（語彙、応答時間、発話数）
+  - カテゴリ別スコア計算（A-Fグレード）
+  - 弱点分析と改善提案
+  - レポート生成（テキスト/JSON）
+
+- 診断機能
+  - オーディオデバイスチェック
+  - ネットワーク接続確認
+  - システムパフォーマンス監視
 
 ---
 
 ## 2. アーキテクチャ（5レイヤ）
 
 1) **Capture/Transfer**
-- MVPはローカル動画入力（OpenCV）で開始
-- 将来：WebRTCでROI映像 or Stateのみ送信
+- ローカル動画入力（OpenCV）
+- PC画面キャプチャ（MSS）
+- WebRTCでROI映像 or Stateのみ送信
 
 2) **State Recognition**
 - ROI切り出し
@@ -41,14 +61,18 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 
 3) **Dialogue/Voice**
 - YAMLトリガー（P0〜P3）
-- Realtime APIで音声会話（MVPはテキストでもOK）
+- Realtime APIで音声会話
+- 音声入力（VAD + STT）
 
 4) **Audio Engineering**
-- MVPはPCスピーカー出力（後で仮想ミキサーやダッキングへ拡張）
+- PCスピーカー出力
+- マイク入力（VAD付）
+- エコー/クロストーク検出
 
 5) **Personalization/LMS**
-- MVPはローカルログ保存（JSONL）
-- 将来：Qdrant/Pinecone + 学習エージェント
+- ローカルログ保存（JSONL）
+- セッション統計・スコア計算
+- 弱点分析・改善提案
 
 ---
 
@@ -59,6 +83,7 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 ├── README.md
 ├── .env.example
 ├── requirements.txt
+├── requirements-dev.txt
 ├── configs/
 │   ├── roi_defaults.yaml
 │   ├── triggers.yaml
@@ -66,9 +91,10 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 │       └── system.txt
 ├── src/
 │   ├── main.py
+│   ├── constants.py
 │   ├── capture/
 │   │   ├── video_file.py
-│   │   └── (future) screen_capture.py
+│   │   └── screen_capture.py
 │   ├── vision/
 │   │   ├── roi.py
 │   │   ├── anchors.py
@@ -80,10 +106,37 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 │   │   └── rules.py
 │   ├── dialogue/
 │   │   ├── templates.py
-│   │   └── (future) realtime_client.py
+│   │   ├── openai_client.py
+│   │   └── realtime_client.py
+│   ├── audio/
+│   │   ├── capture.py       # Audio capture from microphone
+│   │   ├── vad.py           # Voice Activity Detection
+│   │   └── stt_client.py    # Speech-to-Text (Whisper)
+│   ├── diagnostics/
+│   │   ├── audio_check.py   # Echo/crosstalk detection
+│   │   ├── system_check.py  # Device/system diagnostics
+│   │   └── report.py        # Diagnostic report generation
+│   ├── review/
+│   │   ├── stats.py         # Session statistics
+│   │   ├── scorer.py        # Score calculation
+│   │   ├── analyzer.py      # Weakness analysis
+│   │   └── report.py        # Review report generation
 │   └── utils/
 │       ├── logger.py
-│       └── time.py
+│       ├── time.py
+│       ├── webrtc.py
+│       ├── constants.py
+│       ├── exceptions.py
+│       ├── rate_limiter.py
+│       └── retry.py
+├── tests/
+│   ├── test_capture/
+│   ├── test_vision/
+│   ├── test_trigger/
+│   ├── test_dialogue/
+│   ├── test_audio/
+│   ├── test_diagnostics/
+│   └── test_review/
 └── logs/
     └── (generated) sessions/
 ```
@@ -96,6 +149,38 @@ Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心�
 - Python: 3.11+ 推奨
 - GPU: 任意（YOLOを使う場合はNVIDIA + CUDAで高速化可）
 - 映像入力: 1080p/60fps 推奨（MVPは30fpsでも可）
+
+### 必要なライブラリ
+
+**コアライブラリ:**
+- numpy: 数値計算
+- opencv-python: 画像処理
+- pillow: 画像操作
+
+**設定/環境:**
+- pyyaml: 設定ファイル読み込み
+- python-dotenv: 環境変数管理
+
+**AI/ML:**
+- openai: OpenAI API（GPT-4, Whisper, Realtime API）
+- ultralytics: YOLO検出
+
+**キャプチャ:**
+- mss: PC画面キャプチャ
+
+**通信:**
+- aiortc: WebRTC
+- aiohttp: 非同期HTTP
+- websockets: WebSocket通信
+
+**オーディオ（オプション）:**
+- sounddevice または pyaudio: オーディオ入出力
+- webrtcvad: Voice Activity Detection
+- silero-vad: 高精度VAD（オプション）
+
+**診断（オプション）:**
+- psutil: システム情報取得
+- scipy: 音響解析（FFT）
 
 ---
 
@@ -122,11 +207,12 @@ cp .env.example .env
 
 ---
 
-## 6. 実行方法（MVP）
+## 6. 実行方法
 
-### 6.1 録画ファイルからState抽出 + トリガー（音声なし）
+### 6.1 基本的な使用方法
 
 ```bash
+# テキストのみ（デフォルト）
 python -m src.main \
   --input video \
   --video ./samples/fortnite_sample.mp4 \
@@ -138,11 +224,68 @@ python -m src.main \
 出力：
 - `logs/sessions/session_001/state.jsonl`（フレーム/イベントごとのState）
 - `logs/sessions/session_001/triggers.jsonl`（発火したトリガーと理由）
+- `logs/sessions/session_001/responses.jsonl`（AIレスポンスログ）
 
-### 6.2 Realtime音声応答（オプション）
+### 6.2 音声出力
 
-将来対応：`src/dialogue/realtime_client.py` を実装後に利用します。  
-MVP段階では、まず **テキスト返答**でトリガー品質を固めることを推奨します。
+```bash
+# 音声出力有効（OPENAI_API_KEY必須）
+export OPENAI_API_KEY=your_key_here
+python -m src.main \
+  --input video \
+  --video ./samples/fortnite_sample.mp4 \
+  --out ./logs/sessions/session_test \
+  --voice
+```
+
+### 6.3 音声入力/認識
+
+```bash
+# マイクからの音声入力有効
+python -m src.main \
+  --input video \
+  --video ./samples/fortnite_sample.mp4 \
+  --out ./logs/sessions/session_test \
+  --mic
+
+# VADモデル指定
+python -m src.main \
+  --input video \
+  --video ./samples/fortnite_sample.mp4 \
+  --out ./logs/sessions/session_test \
+  --mic \
+  --vad-model silero \
+  --vad-threshold 0.6
+```
+
+### 6.4 診断モード
+
+```bash
+# 音響診断（エコー・クロストーク検出）
+python -m src.main --diagnostics --audio-check
+
+# システム診断（デバイス・ネットワーク確認）
+python -m src.main --diagnostics --system-check
+
+# 全診断実行
+python -m src.main --diagnostics --full
+```
+
+### 6.5 レビュー/分析モード
+
+```bash
+# セッションのレビューレポート生成
+python -m src.main \
+  --review \
+  --session ./logs/sessions/session_001 \
+  --output ./logs/reports/
+
+# 統計のみ表示
+python -m src.main \
+  --review \
+  --session ./logs/sessions/session_001 \
+  --stats-only
+```
 
 ---
 
@@ -155,7 +298,119 @@ MVP段階では、まず **テキスト返答**でトリガー品質を固める
 - ROI-3（Knocked/Revive / 中央）：`[0.35, 0.40, 0.65, 0.65]`
 - ROI-4（Weapon/Ammo/Materials / 右下）：`[0.55, 0.72, 0.98, 0.98]`
 
-> 注意：HUDスケール/セーフゾーン設定でズレます。商用運用では初回数秒でアンカー検出→ROI補正を行います（MVPの次のイテレーションで実装）。
+> 注意：HUDスケール/セーフゾーン設定でズレます。商用運用では初回数秒でアンカー検出→ROI補正を行います（Phase 3で実装済み）。
+
+---
+
+## 8. CLIオプション
+
+### 基本オプション
+
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--input` | 入力タイプ（videoのみ対応） | - |
+| `--video` | 動画ファイルパス | - |
+| `--out` | 出力ディレクトリ | - |
+| `--triggers` | トリガー設定ファイル | `configs/triggers.yaml` |
+| `--roi` | ROI設定ファイル | `configs/roi_defaults.yaml` |
+| `--system-prompt` | システムプロンプトファイル | `configs/prompts/system.txt` |
+
+### 音声オプション
+
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--voice` | 音声出力を有効化 | False |
+| `--voice-model` | 音声モデル（tts-1/tts-1-hd/realtime） | tts-1 |
+| `--mic` | マイク入力を有効化 | False |
+| `--vad-model` | VADモデル（webrtc/silero/energy） | webrtc |
+| `--vad-threshold` | VAD閾値（0-1） | 0.5 |
+| `--device` | オーディオデバイスインデックス | 自動 |
+
+### 診断オプション
+
+| オプション | 説明 |
+|-----------|------|
+| `--diagnostics` | 診断モードを有効化 |
+| `--audio-check` | 音響診断（エコー・クロストーク） |
+| `--system-check` | システム診断（デバイス・ネットワーク） |
+| `--full` | 全診断実行 |
+
+### レビューオプション
+
+| オプション | 説明 |
+|-----------|------|
+| `--review` | レビューモードを有効化 |
+| `--session` | 対象セッションディレクトリ |
+| `--output` | レポート出力先 |
+| `--stats-only` | 統計のみ表示 |
+| `--format` | 出力形式（text/json/both） |
+
+---
+
+## 9. 設定ファイル
+
+### 9.1 ROI設定（`configs/roi_defaults.yaml`）
+
+HUDのROI（関心領域）を定義します。
+
+```yaml
+rois:
+  hp_shield:
+    id: roi_1
+    name: "HP/Shield"
+    bbox: [0.03, 0.78, 0.32, 0.98]
+    fields:
+      - name: "hp"
+        type: "ocr"
+        location: [0.05, 0.85, 0.15, 0.95]
+      # ...
+```
+
+**カスタマイズ方法:**
+- HUDスケールに合わせて`bbox`座標を調整
+- 異なる解像度でキャリブレーションを実行
+
+### 9.2 トリガー設定（`configs/triggers.yaml`）
+
+AIコーチの発話トリガーを定義します。
+
+```yaml
+triggers:
+  - id: p0_low_hp
+    name: "Low HP Warning"
+    priority: 0  # P0: 最優先
+    enabled: true
+    conditions:
+      - field: "player.status.hp"
+        operator: "lt"
+        value: 30
+    template:
+      combat: "Low HP! Find cover immediately!"
+      non_combat: "Your health is critical. Heal up."
+    cooldown_ms: 15000
+```
+
+**優先度レベル:**
+- P0（0）: 生存関連
+- P1（1）: 戦術関連
+- P2（2）: 学習関連
+- P3（3）: 雑談/復習
+
+**カスタマイズ方法:**
+- `enabled: false` でトリガーを無効化
+- `template` を編集して発話内容を変更
+- `cooldown_ms` で発話頻度を調整
+
+### 9.3 システムプロンプト（`configs/prompts/system.txt`）
+
+OpenAI API用のシステムプロンプトです。
+
+AIコーチのペルソナ、応答スタイル、制約条件を定義します。
+
+**カスタマイズ方法:**
+- 教える英語レベルを調整
+- ゲーム用語の説明方針を変更
+- 応答の長さやスタイルを調整
 
 ---
 
@@ -211,34 +466,15 @@ MVPでは、まず以下を安定させます：
 - #8 メインエントリーポイント実装 ✅
 - #9 MVP統合テスト・検証 ✅ (51 passed)
 
-### Phase 2（低遅延化）
-- [x] PC画面キャプチャ入力 ✅ (2026-02-19)
-- [x] WebRTC Transfer（State or ROI映像） ✅ (2026-02-19)
-- [ ] Realtime音声会話（割り込み制御、短文テンプレ優先）
+### Phase 2（低遅延化） ✅ 完了 (2026-02-19)
+- [x] PC画面キャプチャ入力
+- [x] WebRTC Transfer（State or ROI映像）
+- [x] Realtime音声会話（割り込み制御、短文テンプレ優先）
 
 **実装されたIssue:**
 - #10 PC画面キャプチャモジュール実装 ✅
 - #11 WebRTC Transfer実装 ✅
-- #11 Realtime音声会話機能実装 ✅
-
-**Phase 2 実装内容:**
-
-1. **RealtimeVoiceClient** (`src/dialogue/realtime_client.py`)
-   - OpenAI TTS APIを使用したテキスト→音声変換（MVP）
-   - クールダウン制御（連続発話防止）
-   - 割り込み制御（P0トリガーは常に優先）
-   - 優先度ベースの発話管理
-   - テキスト専用モード（音声無効）
-
-2. **メインエントリーポイント拡張** (`src/main.py`)
-   - `--voice` フラグ：音声出力有効化
-   - `--voice-model` フラグ：音声モデル選択（tts-1/tts-1-hd）
-   - トリガー発火時の自動音声出力
-
-3. **テストカバレッジ**
-   - ユニットテスト: 11 passed
-   - 統合テスト: 全合格
-   - 既存機能互換性: 確認済
+- #12 Realtime音声会話機能実装 ✅
 
 **使用方法:**
 
@@ -258,37 +494,56 @@ python -m src.main \
   --voice
 ```
 
-**今後の拡張:**
-- OpenAI Realtime API（WebSocket）への完全移行
-- スピーチ→テキスト（STT）機能の実装
-- 双方向会話機能
-- WebRTCストリーミング連携
-
-### Phase 3（コンソール対応強化） 🚀 進行中 (2026-02-19)
+### Phase 3（コンソール対応強化） ✅ 完了 (2026-02-21)
 - [x] HUDキャリブレーション（アンカー検出で自動補正）
 - [x] 回復/建築/移動キューの検出実装
-- [ ] 音声入力/認識
-- [ ] 復習機能（スコア化・弱点分析）
-- [ ] サポート用診断（音声混線/エコー検知）
+- [x] 音声入力/認識（VAD + STT）
+- [x] 復習機能（スコア化・弱点分析）
+- [x] サポート用診断（音声混線/エコー検知）
 
-**実装された機能:**
-- HUDキャリブレーション (`anchors.py` 強化)
-  - テンプレートマッチングによるアンカー検出
-  - ROI自動補正機能
-- 回復検出器 (`healing_detector.py`)
-  - 色ベースの回復検出
-  - 検出履歴管理
-- 建築検出器 (`building_detector.py`)
-  - Edit UI検出
-  - 建築レート分析
-  - モーション検出
-- 移動検出器 (`movement_detector.py`)
-  - カメラパン検出（Optical Flow）
-  - キャラクター移動検出
-  - ミニマップ変化検出
-  - 移動強度・方向推定
+**実装されたモジュール:**
 
-**詳細:** [PHASE3_PROGRESS.md](./PHASE3_PROGRESS.md)
+1. **Audioモジュール** (`src/audio/`)
+   - `capture.py`: マイク入力、ノイズゲート、音声キャプチャ
+   - `vad.py`: Voice Activity Detection（WebRTC/Silero/Energy）
+   - `stt_client.py`: OpenAI Whisper APIによる音声認識
+
+2. **Diagnosticsモジュール** (`src/diagnostics/`)
+   - `audio_check.py`: エコー検出、クロストーク検出、音質分析
+   - `system_check.py`: マイク/スピーカー確認、ネットワーク診断、パフォーマンスチェック
+   - `report.py`: 診断レポート生成、修正提案
+
+3. **Reviewモジュール** (`src/review/`)
+   - `stats.py`: セッション統計収集（語彙、応答時間、発話数）
+   - `scorer.py`: カテゴリ別スコア計算（発音、語彙、応答速度、戦略思考）
+   - `analyzer.py`: 弱点分析、改善提案生成
+   - `report.py`: レビューレポート生成（テキスト/JSON）
+
+**使用方法:**
+
+```bash
+# 音声入力有効（マイクからの音声認識）
+python -m src.main \
+  --input video \
+  --video ./samples/test_video.mp4 \
+  --out ./logs/sessions/session_test \
+  --mic
+
+# VAD調整
+python -m src.main \
+  --input video \
+  --video ./samples/test_video.mp4 \
+  --out ./logs/sessions/session_test \
+  --mic \
+  --vad-model silero \
+  --vad-threshold 0.6
+
+# 診断モード
+python -m src.main --diagnostics --audio-check
+
+# レビューモード
+python -m src.main --review --session ./logs/sessions/session_001
+```
 
 ---
 

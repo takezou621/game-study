@@ -1,10 +1,41 @@
 """Session logger with JSONL support."""
 
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+# Cache for loggers
+_loggers: Dict[str, logging.Logger] = {}
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Get or create a logger with the given name.
+
+    Args:
+        name: Logger name (usually __name__)
+
+    Returns:
+        Configured logger instance
+    """
+    if name in _loggers:
+        return _loggers[name]
+
+    logger = logging.getLogger(name)
+
+    # Only configure if not already configured
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        ))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+
+    _loggers[name] = logger
+    return logger
 
 
 class SessionLogger:

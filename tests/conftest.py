@@ -114,9 +114,15 @@ triggers:
 
 @pytest.fixture
 def state_builder():
-    """Create a StateBuilder instance."""
-    from vision.state_builder import StateBuilder
-    return StateBuilder()
+    """Create a StateBuilder instance.
+
+    Note: This fixture requires cv2 (opencv-python) to be installed.
+    """
+    try:
+        from vision.state_builder import StateBuilder
+        return StateBuilder()
+    except ImportError as e:
+        pytest.skip(f"Skipping state_builder fixture: {e}")
 
 
 @pytest.fixture
