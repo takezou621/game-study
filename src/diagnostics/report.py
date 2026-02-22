@@ -14,10 +14,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from utils.logger import get_logger
-from .audio_check import AudioIssue, AudioMetrics, AudioIssueType
+
+from .audio_check import AudioIssue, AudioIssueType, AudioMetrics
 from .system_check import CheckResult, CheckStatus, SystemComponent
 
 logger = get_logger(__name__)
@@ -36,7 +37,7 @@ class FixSuggestion:
     """Suggested fix for a diagnostic issue."""
     action: str
     description: str
-    commands: Optional[List[str]] = None
+    commands: list[str] | None = None
     priority: int = 0  # Lower is higher priority
     automated: bool = False  # Can this be automatically fixed?
 
@@ -49,10 +50,10 @@ class DiagnosticIssue:
     severity: SeverityLevel
     message: str
     timestamp: float = field(default_factory=time.time)
-    details: Dict[str, Any] = field(default_factory=dict)
-    fix_suggestions: List[FixSuggestion] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
+    fix_suggestions: list[FixSuggestion] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "component": self.component,
@@ -80,8 +81,8 @@ class DiagnosticReport:
 
     def __init__(
         self,
-        session_id: Optional[str] = None,
-        timestamp: Optional[float] = None
+        session_id: str | None = None,
+        timestamp: float | None = None
     ):
         """Initialize diagnostic report.
 
@@ -91,10 +92,10 @@ class DiagnosticReport:
         """
         self.session_id = session_id or f"diag_{int(time.time())}"
         self.timestamp = timestamp or time.time()
-        self.issues: List[DiagnosticIssue] = []
-        self.audio_metrics: Optional[AudioMetrics] = None
-        self.system_checks: List[CheckResult] = []
-        self.summary: Dict[str, Any] = {}
+        self.issues: list[DiagnosticIssue] = []
+        self.audio_metrics: AudioMetrics | None = None
+        self.system_checks: list[CheckResult] = []
+        self.summary: dict[str, Any] = {}
 
     def add_issue(self, issue: DiagnosticIssue) -> None:
         """Add an issue to the report.
@@ -104,7 +105,7 @@ class DiagnosticReport:
         """
         self.issues.append(issue)
 
-    def add_issues(self, issues: List[DiagnosticIssue]) -> None:
+    def add_issues(self, issues: list[DiagnosticIssue]) -> None:
         """Add multiple issues to the report.
 
         Args:
@@ -128,14 +129,14 @@ class DiagnosticReport:
         """
         self.system_checks.append(check)
 
-    def generate_summary(self) -> Dict[str, Any]:
+    def generate_summary(self) -> dict[str, Any]:
         """Generate summary statistics.
 
         Returns:
             Summary dictionary
         """
         severity_counts = {level.value: 0 for level in SeverityLevel}
-        component_counts: Dict[str, int] = {}
+        component_counts: dict[str, int] = {}
 
         for issue in self.issues:
             severity_counts[issue.severity.value] += 1
@@ -171,7 +172,7 @@ class DiagnosticReport:
             return "warning"
         return "healthy"
 
-    def get_issues_by_severity(self, severity: SeverityLevel) -> List[DiagnosticIssue]:
+    def get_issues_by_severity(self, severity: SeverityLevel) -> list[DiagnosticIssue]:
         """Get issues filtered by severity.
 
         Args:
@@ -182,7 +183,7 @@ class DiagnosticReport:
         """
         return [i for i in self.issues if i.severity == severity]
 
-    def get_issues_by_component(self, component: str) -> List[DiagnosticIssue]:
+    def get_issues_by_component(self, component: str) -> list[DiagnosticIssue]:
         """Get issues filtered by component.
 
         Args:
@@ -193,7 +194,7 @@ class DiagnosticReport:
         """
         return [i for i in self.issues if i.component == component]
 
-    def get_critical_issues(self) -> List[DiagnosticIssue]:
+    def get_critical_issues(self) -> list[DiagnosticIssue]:
         """Get all critical issues.
 
         Returns:
@@ -201,7 +202,7 @@ class DiagnosticReport:
         """
         return self.get_issues_by_severity(SeverityLevel.CRITICAL)
 
-    def get_error_issues(self) -> List[DiagnosticIssue]:
+    def get_error_issues(self) -> list[DiagnosticIssue]:
         """Get all error-level issues.
 
         Returns:
@@ -209,7 +210,7 @@ class DiagnosticReport:
         """
         return self.get_issues_by_severity(SeverityLevel.ERROR)
 
-    def get_warning_issues(self) -> List[DiagnosticIssue]:
+    def get_warning_issues(self) -> list[DiagnosticIssue]:
         """Get all warning-level issues.
 
         Returns:
@@ -217,7 +218,7 @@ class DiagnosticReport:
         """
         return self.get_issues_by_severity(SeverityLevel.WARNING)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert report to dictionary.
 
         Returns:
@@ -265,7 +266,7 @@ class IssueClassifier:
     """Classifies diagnostic issues and provides fix suggestions."""
 
     # Predefined fix suggestions for common issues
-    FIX_SUGGESTIONS: Dict[str, List[FixSuggestion]] = {
+    FIX_SUGGESTIONS: dict[str, list[FixSuggestion]] = {
         "echo": [
             FixSuggestion(
                 action="Use headphones",
@@ -453,7 +454,7 @@ class IssueClassifier:
         )
 
     @classmethod
-    def classify_system_check(cls, check: CheckResult) -> Optional[DiagnosticIssue]:
+    def classify_system_check(cls, check: CheckResult) -> DiagnosticIssue | None:
         """Classify a system check result as an issue if needed.
 
         Args:
@@ -518,7 +519,7 @@ class IssueClassifier:
 class ReportGenerator:
     """Generates diagnostic reports from check results."""
 
-    def __init__(self, session_id: Optional[str] = None):
+    def __init__(self, session_id: str | None = None):
         """Initialize report generator.
 
         Args:
@@ -529,9 +530,9 @@ class ReportGenerator:
 
     def create_report(
         self,
-        audio_issues: Optional[List[AudioIssue]] = None,
-        audio_metrics: Optional[AudioMetrics] = None,
-        system_checks: Optional[List[CheckResult]] = None
+        audio_issues: list[AudioIssue] | None = None,
+        audio_metrics: AudioMetrics | None = None,
+        system_checks: list[CheckResult] | None = None
     ) -> DiagnosticReport:
         """Create a diagnostic report from check results.
 
@@ -570,10 +571,10 @@ class ReportGenerator:
 
     async def generate_and_save_report(
         self,
-        audio_issues: Optional[List[AudioIssue]] = None,
-        audio_metrics: Optional[AudioMetrics] = None,
-        system_checks: Optional[List[CheckResult]] = None,
-        output_dir: Optional[str] = None
+        audio_issues: list[AudioIssue] | None = None,
+        audio_metrics: AudioMetrics | None = None,
+        system_checks: list[CheckResult] | None = None,
+        output_dir: str | None = None
     ) -> DiagnosticReport:
         """Generate and save a diagnostic report.
 
@@ -664,7 +665,7 @@ class ConsoleReporter:
             if metrics.echo_detected:
                 lines.append(f"  Echo: DETECTED ({metrics.echo_delay_ms:.1f}ms delay)")
             if metrics.crosstalk_detected:
-                lines.append(f"  Crosstalk: DETECTED")
+                lines.append("  Crosstalk: DETECTED")
 
         # System checks
         if report.system_checks:
@@ -716,11 +717,11 @@ def print_report_to_console(report: DiagnosticReport) -> None:
 
 
 async def generate_diagnostic_report(
-    audio_issues: Optional[List[AudioIssue]] = None,
-    audio_metrics: Optional[AudioMetrics] = None,
-    system_checks: Optional[List[CheckResult]] = None,
-    session_id: Optional[str] = None,
-    save_to: Optional[str] = None
+    audio_issues: list[AudioIssue] | None = None,
+    audio_metrics: AudioMetrics | None = None,
+    system_checks: list[CheckResult] | None = None,
+    session_id: str | None = None,
+    save_to: str | None = None
 ) -> DiagnosticReport:
     """Generate a diagnostic report.
 

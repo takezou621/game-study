@@ -1,6 +1,5 @@
 """Test that conftest fixtures work correctly."""
 
-import pytest
 
 
 class TestFixtures:

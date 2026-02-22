@@ -1,10 +1,8 @@
 """Review report generation for session analysis."""
 
 import json
-import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from review.analyzer import AnalysisResult
 from review.scorer import OverallScore
@@ -27,7 +25,7 @@ class ReviewReportGenerator:
         score: OverallScore,
         analysis: AnalysisResult,
         output_format: str = "both"
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Generate review report in specified format(s).
 
@@ -150,7 +148,7 @@ class ReviewReportGenerator:
                 lines.append(f"   Description: {weakness.description}")
                 lines.append(f"   Suggestion: {weakness.suggestion}")
                 if weakness.evidence:
-                    lines.append(f"   Evidence:")
+                    lines.append("   Evidence:")
                     for evidence in weakness.evidence[:3]:
                         lines.append(f"     - {evidence}")
                 lines.append("")
@@ -262,16 +260,16 @@ class ReviewReportGenerator:
             self.logger.info(f"{format_type.upper()} report saved to: {output_path}")
             return str(output_path.absolute())
 
-        except IOError as e:
+        except OSError as e:
             self.logger.error(f"Error saving {format_type} report: {e}", e)
             raise
 
 
 async def generate_review_report(
     session_dir: str,
-    output_dir: Optional[str] = None,
+    output_dir: str | None = None,
     output_format: str = "both"
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Convenience function to generate a complete review report.
 

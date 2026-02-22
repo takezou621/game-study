@@ -1,8 +1,7 @@
 """UI anchor detection for calibration."""
 
-import cv2
+
 import numpy as np
-from typing import Optional, Tuple, Dict
 
 
 class AnchorDetector:
@@ -17,7 +16,7 @@ class AnchorDetector:
         """Initialize anchor detector."""
         self.enabled = False  # MVP: Disabled
 
-    def detect_anchors(self, frame: np.ndarray) -> Dict[str, Tuple[int, int]]:
+    def detect_anchors(self, frame: np.ndarray) -> dict[str, tuple[int, int]]:
         """
         Detect UI anchor points in frame.
 
@@ -37,7 +36,7 @@ class AnchorDetector:
         # This is a placeholder for future implementation
         return self._get_default_anchors(frame.shape)
 
-    def _get_default_anchors(self, shape: Tuple[int, ...]) -> Dict[str, Tuple[int, int]]:
+    def _get_default_anchors(self, shape: tuple[int, ...]) -> dict[str, tuple[int, int]]:
         """
         Get default anchor positions based on frame resolution.
 
@@ -58,9 +57,9 @@ class AnchorDetector:
 
     def calibrate_roi(
         self,
-        detected_anchors: Dict[str, Tuple[int, int]],
-        roi_config: Dict
-    ) -> Dict:
+        detected_anchors: dict[str, tuple[int, int]],
+        roi_config: dict
+    ) -> dict:
         """
         Calibrate ROI positions based on detected anchors.
 

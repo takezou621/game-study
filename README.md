@@ -1,5 +1,11 @@
 # ゲーミング英会話AI教師 MVP (Fortnite)
 
+[![CI Status](https://github.com/kawai/game-study/workflows/CI/badge.svg)](https://github.com/kawai/game-study/actions)
+[![Coverage](https://codecov.io/gh/kawai/game-study/branch/main/graph/badge.svg)](https://codecov.io/gh/kawai/game-study)
+[![PyPI Version](https://img.shields.io/pypi/v/game-study.svg)](https://pypi.org/project/game-study/)
+[![License](https://img.shields.io/github/license/kawai/game-study.svg)](LICENSE)
+[![Python Versions](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://pypi.org/project/game-study/)
+
 Fortniteのプレイ映像（録画/配信/リアルタイム）からHUD中心の状態（Game State）を抽出し、AI教師が「喋る相棒」として低遅延でコール/学習介入を行うMVPです。
 
 - 目的：**商用レベルの安定稼働**と**低遅延（E2E 1〜2秒台）**を最優先
@@ -289,7 +295,128 @@ python -m src.main \
 
 ---
 
-## 7. ROI定義（MVP初期値）
+## 7. Docker の使用
+
+### 7.1 Docker イメージのビルド
+
+```bash
+docker build -t game-study:latest .
+```
+
+### 7.2 Docker コンテナでの実行
+
+```bash
+# テキストのみ
+docker run -v $(pwd)/samples:/app/samples \
+            -v $(pwd)/configs:/app/configs \
+            -v $(pwd)/logs:/app/logs \
+            -e OPENAI_API_KEY=your_key_here \
+            game-study:latest \
+            python -m src.main \
+              --input video \
+              --video /app/samples/fortnite_sample.mp4 \
+              --out /app/logs/sessions/session_docker
+
+# 音声出力付き（音声デバイスへのアクセスが必要）
+docker run -v $(pwd)/samples:/app/samples \
+            -v $(pwd)/configs:/app/configs \
+            -v $(pwd)/logs:/app/logs \
+            --device /dev/snd \
+            -e OPENAI_API_KEY=your_key_here \
+            game-study:latest \
+            python -m src.main \
+              --input video \
+              --video /app/samples/fortnite_sample.mp4 \
+              --out /app/logs/sessions/session_docker \
+              --voice
+```
+
+### 7.3 Docker Compose の使用
+
+```bash
+docker-compose up
+```
+
+---
+
+## 8. 設定リファレンス
+
+### 8.1 環境変数
+
+| 変数名 | 説明 | デフォルト値 |
+|--------|------|-------------|
+| `OPENAI_API_KEY` | OpenAI APIキー | 必須 |
+| `OPENAI_BASE_URL` | OpenAI APIベースURL | https://api.openai.com/v1 |
+| `LOG_LEVEL` | ログレベル | INFO |
+| `MAX_RESPONSE_CHARS` | 最大応答文字数 | 200 |
+| `VAD_THRESHOLD` | VAD閾値 | 0.5 |
+
+### 8.2 ROI設定（`configs/roi_defaults.yaml`）
+
+HUDのROI（関心領域）を定義します。
+
+```yaml
+rois:
+  hp_shield:
+    id: roi_1
+    name: "HP/Shield"
+    bbox: [0.03, 0.78, 0.32, 0.98]
+    fields:
+      - name: "hp"
+        type: "ocr"
+        location: [0.05, 0.85, 0.15, 0.95]
+      # ...
+```
+
+**カスタマイズ方法:**
+- HUDスケールに合わせて`bbox`座標を調整
+- 異なる解像度でキャリブレーションを実行
+
+### 8.3 トリガー設定（`configs/triggers.yaml`）
+
+AIコーチの発話トリガーを定義します。
+
+```yaml
+triggers:
+  - id: p0_low_hp
+    name: "Low HP Warning"
+    priority: 0  # P0: 最優先
+    enabled: true
+    conditions:
+      - field: "player.status.hp"
+        operator: "lt"
+        value: 30
+    template:
+      combat: "Low HP! Find cover immediately!"
+      non_combat: "Your health is critical. Heal up."
+    cooldown_ms: 15000
+```
+
+**優先度レベル:**
+- P0（0）: 生存関連
+- P1（1）: 戦術関連
+- P2（2）: 学習関連
+- P3（3）: 雑談/復習
+
+**カスタマイズ方法:**
+- `enabled: false` でトリガーを無効化
+- `template` を編集して発話内容を変更
+- `cooldown_ms` で発話頻度を調整
+
+### 8.4 システムプロンプト（`configs/prompts/system.txt`）
+
+OpenAI API用のシステムプロンプトです。
+
+AIコーチのペルソナ、応答スタイル、制約条件を定義します。
+
+**カスタマイズ方法:**
+- 教える英語レベルを調整
+- ゲーム用語の説明方針を変更
+- 応答の長さやスタイルを調整
+
+---
+
+## 9. ROI定義（MVP初期値）
 
 正規化座標（0〜1）で管理します。
 
@@ -302,7 +429,7 @@ python -m src.main \
 
 ---
 
-## 8. CLIオプション
+## 10. CLIオプション
 
 ### 基本オプション
 
@@ -347,74 +474,7 @@ python -m src.main \
 
 ---
 
-## 9. 設定ファイル
-
-### 9.1 ROI設定（`configs/roi_defaults.yaml`）
-
-HUDのROI（関心領域）を定義します。
-
-```yaml
-rois:
-  hp_shield:
-    id: roi_1
-    name: "HP/Shield"
-    bbox: [0.03, 0.78, 0.32, 0.98]
-    fields:
-      - name: "hp"
-        type: "ocr"
-        location: [0.05, 0.85, 0.15, 0.95]
-      # ...
-```
-
-**カスタマイズ方法:**
-- HUDスケールに合わせて`bbox`座標を調整
-- 異なる解像度でキャリブレーションを実行
-
-### 9.2 トリガー設定（`configs/triggers.yaml`）
-
-AIコーチの発話トリガーを定義します。
-
-```yaml
-triggers:
-  - id: p0_low_hp
-    name: "Low HP Warning"
-    priority: 0  # P0: 最優先
-    enabled: true
-    conditions:
-      - field: "player.status.hp"
-        operator: "lt"
-        value: 30
-    template:
-      combat: "Low HP! Find cover immediately!"
-      non_combat: "Your health is critical. Heal up."
-    cooldown_ms: 15000
-```
-
-**優先度レベル:**
-- P0（0）: 生存関連
-- P1（1）: 戦術関連
-- P2（2）: 学習関連
-- P3（3）: 雑談/復習
-
-**カスタマイズ方法:**
-- `enabled: false` でトリガーを無効化
-- `template` を編集して発話内容を変更
-- `cooldown_ms` で発話頻度を調整
-
-### 9.3 システムプロンプト（`configs/prompts/system.txt`）
-
-OpenAI API用のシステムプロンプトです。
-
-AIコーチのペルソナ、応答スタイル、制約条件を定義します。
-
-**カスタマイズ方法:**
-- 教える英語レベルを調整
-- ゲーム用語の説明方針を変更
-- 応答の長さやスタイルを調整
-
----
-
-## 8. トリガーエンジン（P0〜P3）
+## 11. トリガーエンジン（P0〜P3）
 
 `configs/triggers.yaml` にルールを定義します。
 
@@ -430,7 +490,7 @@ MVPでは以下を最重視します：
 
 ---
 
-## 9. Game State（JSON）ポリシー
+## 12. Game State（JSON）ポリシー
 
 各フィールドは可能な限り以下を持ちます：
 
@@ -448,7 +508,7 @@ MVPでは、まず以下を安定させます：
 
 ---
 
-## 10. ロードマップ（次の実装）
+## 13. ロードマップ（次の実装）
 
 ### Phase 1（このリポジトリMVP） ✅ 完全完了 (2026-02-19)
 - [x] 録画入力でROI→State生成
@@ -547,19 +607,26 @@ python -m src.main --review --session ./logs/sessions/session_001
 
 ---
 
-## 11. セキュリティ / コンプライアンス
+## 14. セキュリティ / コンプライアンス
 
 - 本プロジェクトは学習支援を目的とし、ゲーム操作の自動化や不正優位性獲得を行いません。
 - 画面解析はHUD中心（必要最小限）とし、可能な限り **State(JSON)のみ**を扱います。
 - 個人情報が含まれうるログは、デフォルトでローカル保存。クラウド送信時は明示的同意を前提とします。
 
+詳細は [SECURITY.md](SECURITY.md) を参照してください。
+
 ---
 
-## 12. 開発メモ
+## 15. 開発メモ
 
 推奨の検証順：
 1) HP/Shieldの抽出精度を固める（最重要）
 2) Knocked/Reviveの検出でP0トリガーを固める
 3) Storm収縮のP1トリガーを追加
-4) 学習介入（P2）を“戦闘外のみ”で慎重に導入
+4) 学習介入（P2）を"戦闘外のみ"で慎重に導入
 
+---
+
+## ライセンス
+
+このプロジェクトは [LICENSE](LICENSE) ファイルで定義されたライセンスの下で提供されています。

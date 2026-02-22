@@ -1,6 +1,7 @@
 """Tests for DialogueTemplateManager."""
 
 import pytest
+
 from dialogue.templates import DialogueTemplateManager
 
 

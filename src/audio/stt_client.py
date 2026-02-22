@@ -4,13 +4,12 @@ This module provides speech recognition functionality using OpenAI's
 Whisper API for transcribing audio input.
 """
 
-import asyncio
-import base64
 import io
 import time
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -22,7 +21,7 @@ except ImportError:
     AsyncOpenAI = None
     OpenAIError = Exception
 
-from utils.exceptions import APIError, RateLimitError, ConfigurationError
+from utils.exceptions import APIError, ConfigurationError, RateLimitError
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -50,7 +49,7 @@ class STTConfig:
     """STT configuration."""
     model: STTModel = STTModel.WHISPER_1
     language: STTLanguage = STTLanguage.ENGLISH
-    prompt: Optional[str] = None  # Optional prompt for context
+    prompt: str | None = None  # Optional prompt for context
     temperature: float = 0.0  # Sampling temperature (0-1)
     enable_timestamps: bool = False
     enable_vad_filter: bool = True  # Enable VAD filtering
@@ -63,10 +62,10 @@ class TranscriptionResult:
     language: str
     duration_ms: float
     confidence: float = 0.0
-    segments: List[Dict[str, Any]] = field(default_factory=list)
+    segments: list[dict[str, Any]] = field(default_factory=list)
     timestamp: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "text": self.text,
@@ -105,8 +104,8 @@ class STTClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        config: Optional[STTConfig] = None
+        api_key: str | None = None,
+        config: STTConfig | None = None
     ):
         """
         Initialize STT client.
@@ -134,12 +133,12 @@ class STTClient:
         self.enabled = True
 
         # State
-        self._current_transcription: Optional[str] = None
+        self._current_transcription: str | None = None
 
     async def transcribe(
         self,
-        audio: Union[np.ndarray, bytes, str],
-        language: Optional[STTLanguage] = None
+        audio: np.ndarray | bytes | str,
+        language: STTLanguage | None = None
     ) -> TranscriptionResult:
         """
         Transcribe audio to text.
@@ -208,7 +207,7 @@ class STTClient:
             if "rate_limit" in str(e).lower():
                 raise RateLimitError(
                     "STT rate limit exceeded",
-                    endpoint="audio.transcriptions"
+                    cause=e
                 )
             raise APIError(
                 f"STT transcription failed: {e}",
@@ -221,9 +220,9 @@ class STTClient:
 
     async def transcribe_stream(
         self,
-        audio_stream: AsyncIterator[Union[np.ndarray, bytes]],
-        language: Optional[STTLanguage] = None,
-        on_partial: Optional[Callable[[PartialTranscription], None]] = None
+        audio_stream: AsyncIterator[np.ndarray | bytes],
+        language: STTLanguage | None = None,
+        on_partial: Callable[[PartialTranscription], None] | None = None
     ) -> AsyncIterator[PartialTranscription]:
         """
         Transcribe streaming audio.
@@ -291,7 +290,7 @@ class STTClient:
 
     async def _prepare_audio_file(
         self,
-        audio: Union[np.ndarray, bytes, str]
+        audio: np.ndarray | bytes | str
     ) -> io.BufferedReader:
         """
         Prepare audio file for API submission.
@@ -314,7 +313,6 @@ class STTClient:
 
         # Convert to WAV format
         import wave
-        import struct
 
         # Ensure float32 normalized
         if audio_array.dtype == np.int16:
@@ -356,7 +354,7 @@ class StreamingSTT:
     def __init__(
         self,
         stt_client: STTClient,
-        vad_detector: Optional[Any] = None,
+        vad_detector: Any | None = None,
         min_speech_ms: int = 500,
         silence_padding_ms: int = 500
     ):
@@ -376,13 +374,13 @@ class StreamingSTT:
 
         # State
         self._in_speech = False
-        self._speech_buffer: List[np.ndarray] = []
+        self._speech_buffer: list[np.ndarray] = []
         self._silence_frames = 0
-        self._speech_start_time: Optional[float] = None
+        self._speech_start_time: float | None = None
 
         # Callbacks
-        self._on_transcription: Optional[Callable[[TranscriptionResult], None]] = None
-        self._on_partial: Optional[Callable[[PartialTranscription], None]] = None
+        self._on_transcription: Callable[[TranscriptionResult], None] | None = None
+        self._on_partial: Callable[[PartialTranscription], None] | None = None
 
     def on_transcription(
         self,
@@ -401,8 +399,8 @@ class StreamingSTT:
     async def process_frame(
         self,
         audio: np.ndarray,
-        vad_result: Optional[Any] = None
-    ) -> Optional[TranscriptionResult]:
+        vad_result: Any | None = None
+    ) -> TranscriptionResult | None:
         """
         Process a single audio frame.
 
@@ -443,7 +441,7 @@ class StreamingSTT:
 
         return None
 
-    async def _flush_speech_buffer(self) -> Optional[TranscriptionResult]:
+    async def _flush_speech_buffer(self) -> TranscriptionResult | None:
         """Transcribe and flush speech buffer."""
         if not self._speech_buffer:
             return None
@@ -483,7 +481,7 @@ class StreamingSTT:
 
 
 def create_stt_client(
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     language: STTLanguage = STTLanguage.ENGLISH
 ) -> STTClient:
     """

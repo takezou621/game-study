@@ -1,10 +1,8 @@
 """Tests for SessionLogger."""
 
-import pytest
 import json
-import tempfile
-import shutil
 from pathlib import Path
+
 from utils.logger import SessionLogger
 
 
@@ -44,7 +42,7 @@ class TestSessionLogger:
         # Verify file was created and contains correct data
         assert logger.state_log_path.exists()
 
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             content = f.read()
             assert content.strip() == json.dumps(test_state, ensure_ascii=False)
 
@@ -62,7 +60,7 @@ class TestSessionLogger:
             logger.log_state(state)
 
         # Verify all states were logged
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             lines = f.readlines()
 
         assert len(lines) == 3
@@ -86,7 +84,7 @@ class TestSessionLogger:
         # Verify file was created and contains correct data
         assert logger.trigger_log_path.exists()
 
-        with open(logger.trigger_log_path, "r") as f:
+        with open(logger.trigger_log_path) as f:
             content = f.read()
             assert content.strip() == json.dumps(test_trigger, ensure_ascii=False)
 
@@ -104,7 +102,7 @@ class TestSessionLogger:
             logger.log_trigger(trigger)
 
         # Verify all triggers were logged
-        with open(logger.trigger_log_path, "r") as f:
+        with open(logger.trigger_log_path) as f:
             lines = f.readlines()
 
         assert len(lines) == 3
@@ -124,7 +122,7 @@ class TestSessionLogger:
         # Verify file was created and contains correct data
         assert logger.response_log_path.exists()
 
-        with open(logger.response_log_path, "r") as f:
+        with open(logger.response_log_path) as f:
             content = f.read()
             assert content.strip() == json.dumps(test_response, ensure_ascii=False)
 
@@ -142,7 +140,7 @@ class TestSessionLogger:
             logger.log_response(response)
 
         # Verify all responses were logged
-        with open(logger.response_log_path, "r") as f:
+        with open(logger.response_log_path) as f:
             lines = f.readlines()
 
         assert len(lines) == 3
@@ -156,7 +154,7 @@ class TestSessionLogger:
         # Verify file was created
         assert logger.error_log_path.exists()
 
-        with open(logger.error_log_path, "r") as f:
+        with open(logger.error_log_path) as f:
             content = f.read()
 
         assert "Test error message" in content
@@ -174,7 +172,7 @@ class TestSessionLogger:
         # Verify file was created
         assert logger.error_log_path.exists()
 
-        with open(logger.error_log_path, "r") as f:
+        with open(logger.error_log_path) as f:
             content = f.read()
 
         assert "Something went wrong" in content
@@ -190,7 +188,7 @@ class TestSessionLogger:
         logger.log_error("Error 3")
 
         # Verify all errors were logged
-        with open(logger.error_log_path, "r") as f:
+        with open(logger.error_log_path) as f:
             lines = f.readlines()
 
         assert len(lines) == 3
@@ -206,7 +204,7 @@ class TestSessionLogger:
         logger2.log_state({"state": 2})
 
         # Both states should be in the file
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             lines = f.readlines()
 
         assert len(lines) == 2
@@ -223,7 +221,7 @@ class TestSessionLogger:
         assert "response_log_path" in info
         assert "created_at" in info
 
-        assert info["session_dir"] == temp_session_dir
+        assert info["session_dir"] == str(temp_session_dir)
         assert info["state_log_path"] == str(logger.state_log_path)
         assert info["trigger_log_path"] == str(logger.trigger_log_path)
         assert info["response_log_path"] == str(logger.response_log_path)
@@ -236,7 +234,7 @@ class TestSessionLogger:
         logger.log_state({"seq": 2})
         logger.log_state({"seq": 3})
 
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             for i, line in enumerate(f, start=1):
                 data = json.loads(line)
                 assert data["seq"] == i
@@ -252,7 +250,7 @@ class TestSessionLogger:
 
         logger.log_state(test_data)
 
-        with open(logger.state_log_path, "r", encoding="utf-8") as f:
+        with open(logger.state_log_path, encoding="utf-8") as f:
             content = f.read()
 
         assert "日本語テスト" in content
@@ -283,7 +281,7 @@ class TestSessionLogger:
 
         logger.log_state(complex_state)
 
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             loaded = json.loads(f.read())
 
         assert loaded == complex_state
@@ -294,7 +292,7 @@ class TestSessionLogger:
 
         logger.log_state({})
 
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             loaded = json.loads(f.read())
 
         assert loaded == {}
@@ -309,14 +307,14 @@ class TestSessionLogger:
         logger.log_error("Error message")
 
         # Verify each file has only its content
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             assert json.loads(f.read())["type"] == "state"
 
-        with open(logger.trigger_log_path, "r") as f:
+        with open(logger.trigger_log_path) as f:
             assert json.loads(f.read())["type"] == "trigger"
 
-        with open(logger.response_log_path, "r") as f:
+        with open(logger.response_log_path) as f:
             assert json.loads(f.read())["type"] == "response"
 
-        with open(logger.error_log_path, "r") as f:
+        with open(logger.error_log_path) as f:
             assert "Error message" in f.read()

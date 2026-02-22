@@ -1,7 +1,5 @@
 """Dialogue template management for AI coach responses."""
 
-import os
-from typing import Dict, Optional, Any
 
 
 class DialogueTemplateManager:
@@ -39,7 +37,7 @@ class DialogueTemplateManager:
         trigger_id: str,
         movement_state: str,
         **kwargs
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get template for trigger and movement state.
 
@@ -73,7 +71,7 @@ class DialogueTemplateManager:
         """
         self.templates[key] = template
 
-    def set_templates_from_dict(self, templates: Dict[str, str]) -> None:
+    def set_templates_from_dict(self, templates: dict[str, str]) -> None:
         """
         Set templates from dictionary.
 
@@ -87,7 +85,7 @@ class DialogueTemplateManager:
         trigger_id: str,
         movement_state: str,
         **kwargs
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get short template (max 2 sentences).
 

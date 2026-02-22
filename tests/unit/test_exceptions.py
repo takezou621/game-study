@@ -1,15 +1,15 @@
 """Tests for custom exceptions."""
 
-import pytest
-
-import sys
 from pathlib import Path
+
+import pytest
 
 # Direct module import
 SRC_PATH = Path(__file__).parent.parent.parent / "src"
 EXCEPTIONS_PATH = SRC_PATH / "exceptions.py"
 
 import importlib.util
+
 spec = importlib.util.spec_from_file_location("exceptions", EXCEPTIONS_PATH)
 exceptions_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(exceptions_module)

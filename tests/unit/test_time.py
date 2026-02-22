@@ -1,11 +1,8 @@
 """Tests for time utilities."""
 
 import importlib.util
-import sys
-from pathlib import Path
-
-import pytest
 import time
+from pathlib import Path
 
 # Direct module import to avoid package __init__.py dependencies
 SRC_PATH = Path(__file__).parent.parent.parent / "src"

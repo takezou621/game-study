@@ -1,6 +1,5 @@
 """YOLO-based icon detector for UI elements."""
 
-from typing import List, Dict, Optional, Tuple
 import numpy as np
 
 
@@ -12,7 +11,7 @@ class YOLODetector:
     Phase 2+: Full YOLO implementation with ultralytics.
     """
 
-    def __init__(self, model_path: Optional[str] = None):
+    def __init__(self, model_path: str | None = None):
         """
         Initialize YOLO detector.
 
@@ -36,8 +35,8 @@ class YOLODetector:
     def detect_icons(
         self,
         frame: np.ndarray,
-        roi_region: Optional[np.ndarray] = None
-    ) -> List[Dict]:
+        roi_region: np.ndarray | None = None
+    ) -> list[dict]:
         """
         Detect UI icons in frame or ROI.
 
@@ -59,7 +58,7 @@ class YOLODetector:
         # return self._parse_results(results)
         return []
 
-    def detect_knocked_status(self, frame: np.ndarray) -> Dict:
+    def detect_knocked_status(self, frame: np.ndarray) -> dict:
         """
         Detect knocked down status.
 
@@ -86,7 +85,7 @@ class YOLODetector:
             "source": "yolo_detector",
         }
 
-    def detect_weapon_icon(self, frame: np.ndarray) -> Optional[str]:
+    def detect_weapon_icon(self, frame: np.ndarray) -> str | None:
         """
         Detect weapon type from icon.
 

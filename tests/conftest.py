@@ -3,7 +3,7 @@
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 import pytest
 
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # ============================================================================
 
 @pytest.fixture
-def base_state() -> Dict[str, Any]:
+def base_state() -> dict[str, Any]:
     """Create a basic game state for testing."""
     return {
         "player": {
@@ -50,7 +50,7 @@ def base_state() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def low_hp_state(base_state: Dict[str, Any]) -> Dict[str, Any]:
+def low_hp_state(base_state: dict[str, Any]) -> dict[str, Any]:
     """Create a game state with low HP."""
     state = base_state.copy()
     state["player"]["status"]["hp"]["value"] = 25
@@ -58,7 +58,7 @@ def low_hp_state(base_state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def in_storm_state(base_state: Dict[str, Any]) -> Dict[str, Any]:
+def in_storm_state(base_state: dict[str, Any]) -> dict[str, Any]:
     """Create a game state where player is in storm."""
     state = base_state.copy()
     state["world"]["storm"]["in_storm"]["value"] = True
@@ -66,7 +66,7 @@ def in_storm_state(base_state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def knocked_state(base_state: Dict[str, Any]) -> Dict[str, Any]:
+def knocked_state(base_state: dict[str, Any]) -> dict[str, Any]:
     """Create a game state where player is knocked."""
     state = base_state.copy()
     state["player"]["status"]["is_knocked"]["value"] = True
@@ -95,7 +95,7 @@ triggers:
     priority: 0
     enabled: true
     conditions:
-      - field: player.status.hp.value
+      - field: player.status.hp
         operator: lt
         value: 30
     templates:
@@ -139,7 +139,7 @@ def trigger_condition():
 @pytest.fixture
 def trigger_rule():
     """Create a sample trigger rule."""
-    from trigger.rules import TriggerRule, TriggerCondition
+    from trigger.rules import TriggerCondition, TriggerRule
 
     conditions = [
         TriggerCondition(field="player.status.hp", operator="lt", value=30)
@@ -185,25 +185,25 @@ def sample_triggers_config_path(temp_dir: Path):
     """Create a sample triggers config file."""
     config_content = """
 triggers:
-  - id: low_hp_alert
-    name: Low HP Alert
+  - id: test_low_hp
+    name: Test Low HP
     priority: 0
     enabled: true
     conditions:
-      - field: player.status.hp.value
+      - field: player.status.hp
         operator: lt
         value: 30
     templates:
-      combat: "Low HP! Heal!"
-      non_combat: "Your HP is low. Consider healing."
+      combat: "Low HP in combat!"
+      non_combat: "Low HP not in combat."
     cooldown_ms: 5000
 
-  - id: knocked_alert
-    name: Knocked Alert
+  - id: test_knocked
+    name: Test Knocked
     priority: 0
     enabled: true
     conditions:
-      - field: player.status.is_knocked.value
+      - field: player.status.is_knocked
         operator: eq
         value: true
     templates:
@@ -211,44 +211,51 @@ triggers:
       non_combat: "You're down. Wait for revive."
     cooldown_ms: 3000
 
-  - id: storm_alert
-    name: Storm Alert
-    priority: 0
-    enabled: true
-    conditions:
-      - field: world.storm.in_storm.value
-        operator: eq
-        value: true
-    templates:
-      combat: "Storm! Move!"
-      non_combat: "You're in the storm. Get to safety."
-    cooldown_ms: 3000
-
-  - id: storm_shrinking
-    name: Storm Shrinking
+  - id: test_storm
+    name: Test Storm
     priority: 1
     enabled: true
     conditions:
-      - field: world.storm.is_shrinking.value
+      - field: world.storm.in_storm
         operator: eq
         value: true
     templates:
-      combat: "Storm closing!"
-      non_combat: "The storm is closing in. Rotate now."
-    cooldown_ms: 10000
+      combat: "Get out of storm!"
+      non_combat: "You're in the storm. Get to safety."
+    cooldown_ms: 3000
 
-  - id: inactivity_reminder
-    name: Inactivity Reminder
+  - id: test_disabled
+    name: Test Disabled
+    priority: 0
+    enabled: false
+    conditions:
+      - field: player.status.hp
+        operator: eq
+        value: 0
+    templates:
+      combat: "Disabled trigger"
+      non_combat: "Disabled trigger"
+    cooldown_ms: 1000
+
+  - id: test_inactivity
+    name: Test Inactivity
     priority: 3
     enabled: true
     conditions:
-      - field: session.inactivity_duration_ms.value
+      - field: session.inactivity_duration_ms
         operator: gte
         value: 30000
     templates:
       combat: null
       non_combat: "You've been quiet. Everything okay?"
     cooldown_ms: 60000
+
+settings:
+  cooldown_enabled: true
+  interrupt_higher_priority: true
+  max_response_length_chars: 200
+  combat_suppress_priority: [2, 3]
+  inactivity_threshold_ms: 30000
 """
     config_path = temp_dir / "triggers.yaml"
     config_path.write_text(config_content)
@@ -260,3 +267,13 @@ def webrtc_server():
     """Create a WebRTCSignalingServer instance."""
     from utils.webrtc import WebRTCSignalingServer
     return WebRTCSignalingServer(host="127.0.0.1", port=8080)
+
+
+# ============================================================================
+# Aliases for backward compatibility
+# ============================================================================
+
+@pytest.fixture
+def sample_state(base_state: dict[str, Any]) -> dict[str, Any]:
+    """Alias for base_state for backward compatibility."""
+    return base_state.copy()

@@ -1,9 +1,6 @@
 """Tests for Rate Limiter."""
 
 import time
-import pytest
-
-import sys
 from pathlib import Path
 
 # Direct module import
@@ -11,6 +8,7 @@ SRC_PATH = Path(__file__).parent.parent.parent / "src"
 RATE_LIMITER_PATH = SRC_PATH / "utils" / "rate_limiter.py"
 
 import importlib.util
+
 spec = importlib.util.spec_from_file_location("rate_limiter", RATE_LIMITER_PATH)
 rate_limiter_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rate_limiter_module)

@@ -1,11 +1,10 @@
 """Tests for TriggerCondition and TriggerRule classes."""
 
 import importlib.util
-import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
-from typing import Dict, Any
 
 # Direct module import to avoid package __init__.py dependencies
 SRC_PATH = Path(__file__).parent.parent.parent / "src"
@@ -52,7 +51,7 @@ class TestTriggerConditionEvaluate:
     """Tests for TriggerCondition.evaluate method."""
 
     @pytest.fixture
-    def state(self) -> Dict[str, Any]:
+    def state(self) -> dict[str, Any]:
         """Create a test state."""
         return {
             "player": {
@@ -136,9 +135,11 @@ class TestTriggerConditionEvaluate:
         assert condition.evaluate(state) is False
 
     def test_evaluate_invalid_operator(self, state):
-        """Test returns False for invalid operator."""
-        condition = TriggerCondition("player.status.hp", "invalid", 30)
-        assert condition.evaluate(state) is False
+        """Test returns False for invalid operator - Pydantic validates at construction."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            TriggerCondition("player.status.hp", "invalid", 30)
 
     def test_evaluate_bool_field(self, state):
         """Test evaluating boolean field."""

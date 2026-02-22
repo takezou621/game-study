@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Dict, Any, Optional, List
+from typing import Any
 
 try:
     from openai import OpenAI
@@ -24,9 +24,9 @@ class OpenAIClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4",
-        system_prompt_path: Optional[str] = None
+        system_prompt_path: str | None = None
     ):
         """
         Initialize OpenAI client.
@@ -35,24 +35,34 @@ class OpenAIClient:
             api_key: OpenAI API key (reads from env if not provided)
             model: Model to use
             system_prompt_path: Path to system prompt file
+
+        Raises:
+            ValueError: If API key is not available
         """
         self.model = model
         self.system_prompt = self._load_system_prompt(system_prompt_path)
-        self.conversation_history: List[Dict[str, str]] = []
+        self.conversation_history: list[dict[str, str]] = []
 
         if not OPENAI_AVAILABLE:
             self.client = None
             return
 
-        # Get API key and pass directly to client (do not store)
+        # Get API key and pass directly to client (do not store in instance variables)
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
 
         if not resolved_api_key:
-            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
+            raise ValueError(
+                "OpenAI API key is required. Set OPENAI_API_KEY environment variable."
+            )
+
+        # Validate API key format (OpenAI keys start with 'sk-')
+        if resolved_api_key and not resolved_api_key.startswith('sk-'):
+            logger.warning("API key format appears invalid (should start with 'sk-')")
 
         self.client = OpenAI(api_key=resolved_api_key)
+        # Do not store the API key in instance variables after initialization
 
-    def _load_system_prompt(self, path: Optional[str]) -> str:
+    def _load_system_prompt(self, path: str | None) -> str:
         """
         Load system prompt from file.
 
@@ -63,7 +73,7 @@ class OpenAIClient:
             System prompt string
         """
         if path and os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path) as f:
                 return f.read()
 
         # Default system prompt
@@ -91,8 +101,8 @@ class OpenAIClient:
 
     def generate_response(
         self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
+        trigger_info: dict[str, Any],
+        state: dict[str, Any],
         movement_state: str,
         max_length: int = MAX_RESPONSE_CHARS
     ) -> str:
@@ -121,7 +131,7 @@ class OpenAIClient:
     def _enhance_template(
         self,
         template: str,
-        state: Dict[str, Any],
+        state: dict[str, Any],
         movement_state: str,
         max_length: int
     ) -> str:
@@ -143,8 +153,8 @@ class OpenAIClient:
 
     def _generate_with_openai(
         self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
+        trigger_info: dict[str, Any],
+        state: dict[str, Any],
         movement_state: str,
         max_length: int
     ) -> str:
@@ -188,15 +198,15 @@ class OpenAIClient:
 
             return response_text
 
-        except Exception as e:
+        except Exception:
             # Log detailed error internally, return sanitized message
             logger.error("Response generation failed", exc_info=True)
             return "Response generation failed. Please try again."
 
     def _build_context(
         self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
+        trigger_info: dict[str, Any],
+        state: dict[str, Any],
         movement_state: str
     ) -> str:
         """
@@ -237,3 +247,8 @@ class OpenAIClient:
     def reset_conversation(self) -> None:
         """Reset conversation history."""
         self.conversation_history = []
+
+    @property
+    def is_available(self) -> bool:
+        """Check if OpenAI client is available."""
+        return self.client is not None

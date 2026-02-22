@@ -1,20 +1,19 @@
 """Tests for VAD (Voice Activity Detection) module."""
 
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from audio.vad import (
+    StreamingVAD,
     VADConfig,
     VADModel,
     VADResult,
     VoiceActivityDetector,
-    StreamingVAD,
     create_vad,
 )
-
 
 # ============================================================================
 # VADModel Tests

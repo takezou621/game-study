@@ -5,11 +5,10 @@ and measuring audio quality metrics such as SNR, latency, and bitrate.
 """
 
 import asyncio
-import math
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 try:
     import numpy as np
@@ -24,8 +23,8 @@ try:
 except ImportError:
     SCIPY_AVAILABLE = False
 
-from utils.logger import get_logger
 from utils.exceptions import GameStudyError
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -47,9 +46,9 @@ class AudioIssue:
     severity: str  # "info", "warning", "error"
     message: str
     timestamp: float = field(default_factory=time.time)
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "type": self.issue_type.value,
@@ -63,18 +62,18 @@ class AudioIssue:
 @dataclass
 class AudioMetrics:
     """Audio quality metrics."""
-    snr_db: Optional[float] = None
-    latency_ms: Optional[float] = None
-    bitrate_kbps: Optional[float] = None
-    rms_level: Optional[float] = None
-    peak_level: Optional[float] = None
+    snr_db: float | None = None
+    latency_ms: float | None = None
+    bitrate_kbps: float | None = None
+    rms_level: float | None = None
+    peak_level: float | None = None
     clipping_count: int = 0
-    frequency_spectrum: Optional[List[Tuple[float, float]]] = None
+    frequency_spectrum: list[tuple[float, float]] | None = None
     echo_detected: bool = False
-    echo_delay_ms: Optional[float] = None
+    echo_delay_ms: float | None = None
     crosstalk_detected: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "snr_db": self.snr_db,
@@ -95,9 +94,9 @@ class AudioDiagnosticsError(GameStudyError):
     def __init__(
         self,
         message: str,
-        check_type: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        check_type: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         context = context or {}
         context.update({"check_type": check_type})
@@ -139,7 +138,7 @@ class EchoDetector:
         self,
         reference_audio: bytes,
         captured_audio: bytes
-    ) -> Tuple[bool, Optional[float], float]:
+    ) -> tuple[bool, float | None, float]:
         """Detect echo in captured audio compared to reference.
 
         Args:
@@ -187,7 +186,7 @@ class EchoDetector:
         self,
         ref: np.ndarray,
         cap: np.ndarray
-    ) -> Tuple[bool, Optional[float], float]:
+    ) -> tuple[bool, float | None, float]:
         """Compute cross-correlation to detect echo.
 
         Args:
@@ -238,7 +237,7 @@ class CrosstalkDetector:
         self,
         sample_rate: int = 24000,
         crosstalk_threshold: float = 0.2,
-        analysis_bands: Optional[List[Tuple[int, int]]] = None
+        analysis_bands: list[tuple[int, int]] | None = None
     ):
         """Initialize crosstalk detector.
 
@@ -267,7 +266,7 @@ class CrosstalkDetector:
         self,
         channel_a: bytes,
         channel_b: bytes
-    ) -> Tuple[bool, float, Dict[str, float]]:
+    ) -> tuple[bool, float, dict[str, float]]:
         """Detect crosstalk between two audio channels.
 
         Args:
@@ -303,7 +302,7 @@ class CrosstalkDetector:
         self,
         a: np.ndarray,
         b: np.ndarray
-    ) -> Tuple[bool, float, Dict[str, float]]:
+    ) -> tuple[bool, float, dict[str, float]]:
         """Analyze frequency spectrum for crosstalk.
 
         Args:
@@ -380,7 +379,7 @@ class AudioQualityAnalyzer:
     async def analyze_quality(
         self,
         audio_data: bytes,
-        reference_data: Optional[bytes] = None
+        reference_data: bytes | None = None
     ) -> AudioMetrics:
         """Analyze audio quality metrics.
 
@@ -421,7 +420,7 @@ class AudioQualityAnalyzer:
     def _compute_metrics(
         self,
         audio: np.ndarray,
-        reference_data: Optional[bytes]
+        reference_data: bytes | None
     ) -> AudioMetrics:
         """Compute audio quality metrics.
 
@@ -515,13 +514,13 @@ class AudioDiagnostics:
         )
 
         self._last_check_time = 0.0
-        self._issue_history: List[AudioIssue] = []
+        self._issue_history: list[AudioIssue] = []
 
     async def check_audio_loopback(
         self,
         played_audio: bytes,
         captured_audio: bytes
-    ) -> Tuple[AudioMetrics, List[AudioIssue]]:
+    ) -> tuple[AudioMetrics, list[AudioIssue]]:
         """Check for echo in audio loopback.
 
         Args:
@@ -597,7 +596,7 @@ class AudioDiagnostics:
         self,
         channel_a: bytes,
         channel_b: bytes
-    ) -> Tuple[bool, Dict[str, float], List[AudioIssue]]:
+    ) -> tuple[bool, dict[str, float], list[AudioIssue]]:
         """Check for crosstalk between audio channels.
 
         Args:
@@ -653,7 +652,7 @@ class AudioDiagnostics:
 
         return latency_ms
 
-    def get_issue_history(self, limit: int = 50) -> List[AudioIssue]:
+    def get_issue_history(self, limit: int = 50) -> list[AudioIssue]:
         """Get recent issue history.
 
         Args:

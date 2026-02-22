@@ -2,16 +2,16 @@
 
 import asyncio
 import time
-import pytest
-
-import sys
 from pathlib import Path
+
+import pytest
 
 # Direct module import
 SRC_PATH = Path(__file__).parent.parent.parent / "src"
 RETRY_PATH = SRC_PATH / "utils" / "retry.py"
 
 import importlib.util
+
 spec = importlib.util.spec_from_file_location("retry", RETRY_PATH)
 retry_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(retry_module)

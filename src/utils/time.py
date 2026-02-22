@@ -2,7 +2,6 @@
 
 import time
 from datetime import datetime
-from typing import Optional
 
 
 def get_timestamp_ms() -> int:
@@ -15,7 +14,7 @@ def get_timestamp_ms() -> int:
     return int(time.time() * 1000)
 
 
-def format_timestamp(ts_ms: int, format_str: Optional[str] = None) -> str:
+def format_timestamp(ts_ms: int, format_str: str | None = None) -> str:
     """
     Format timestamp to string.
 

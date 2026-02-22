@@ -3,14 +3,13 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 try:
     from review.analyzer import (
-        AnalysisResult,
         COMMON_PHRASES,
+        AnalysisResult,
         PhrasePattern,
         StrengthPoint,
         WeaknessAnalyzer,
@@ -573,7 +572,7 @@ class TestScoreCalculatorInit:
 
         calculator = ScoreCalculator(custom_weights=custom_weights)
 
-        assert calculator.CATEGORY_WEIGHTS == custom_weights
+        assert custom_weights == calculator.CATEGORY_WEIGHTS
 
 
 class TestScoreCalculatorCalculate:
