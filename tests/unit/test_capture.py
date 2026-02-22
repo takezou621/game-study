@@ -134,7 +134,7 @@ class TestScreenCapture:
                 assert capture._running
                 assert capture.sct == mock_sct_instance
                 assert capture.monitor_info["width"] == 1920
-                mock_thread.assert_called_once()
+                mock_thread.start.assert_called_once()
 
                 capture.close()
 
