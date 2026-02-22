@@ -15,7 +15,7 @@
 | Re-plan when issues arise | ✅ | Adapted after Codex CLI reviews |
 | Detailed specs upfront | ✅ | Created USECASES.md specification |
 | Subagent strategy | ✅ | Used teams for parallel work |
-| Self-improvement loop | ⚠️ | No lessons.md created yet |
+| Self-improvement loop | ✅ | lessons.md created with 11 patterns |
 | Verification before done | ✅ | Tests run before each commit |
 | Demand elegance | ✅ | Refactored after review feedback |
 | Autonomous bug fixing | ✅ | Fixed all CI/review issues |
@@ -29,7 +29,7 @@
 | Track progress | ✅ | Commits document progress |
 | Explain changes | ✅ | Commit messages are detailed |
 | Document results | ✅ | Review section below |
-| Capture lessons | ❌ | Need lessons.md |
+| Capture lessons | ✅ | lessons.md created with patterns |
 
 ### ✅ Core Principles
 
@@ -187,6 +187,6 @@ Breakdown:
 - Added Lesson 11 to lessons.md (Mock Thread Assertion pattern)
 
 **Areas for Improvement**:
-1. Create lessons.md for pattern capture
+1. ~~Create lessons.md for pattern capture~~ ✅ Done
 2. Continue improving mypy strict compliance
 3. Add more real-world integration tests
