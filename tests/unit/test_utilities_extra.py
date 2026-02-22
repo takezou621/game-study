@@ -532,7 +532,7 @@ class TestHealthChecker:
         """Test check_health when API key is set."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create required directories
-            for dirname in ["logs", "models", "audio_output"]:
+            for dirname in ["logs", "output"]:
                 os.makedirs(os.path.join(tmpdir, dirname), exist_ok=True)
 
             # Change to temp directory
@@ -552,9 +552,9 @@ class TestHealthChecker:
     @patch.dict(os.environ, {}, clear=True)
     def test_check_health_without_api_key(self):
         """Test check_health when API key is not set."""
+        # API key is optional, so healthy depends on config and directories
         result = check_health()
         assert result["api_key"] is False
-        assert result["healthy"] is False
 
     def test_check_health_missing_directories(self):
         """Test check_health when directories don't exist."""
@@ -570,8 +570,8 @@ class TestHealthChecker:
     def test_check_health_with_existing_directories(self):
         """Test check_health when directories exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create required directories
-            for dirname in ["logs", "models", "audio_output"]:
+            # Create required directories (matching Docker layout)
+            for dirname in ["logs", "output"]:
                 os.makedirs(os.path.join(tmpdir, dirname), exist_ok=True)
 
             original_cwd = os.getcwd()

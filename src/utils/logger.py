@@ -147,10 +147,15 @@ class SessionLogger:
             message: Error message
             exception: Optional exception object
         """
+        # Sanitize sensitive data before logging
+        formatter = SensitiveFormatter()
+        sanitized_message = formatter._mask_sensitive(message)
+
         timestamp = datetime.now().isoformat()
-        error_msg = f"[{timestamp}] {message}"
+        error_msg = f"[{timestamp}] {sanitized_message}"
         if exception:
-            error_msg += f"\n  Exception: {type(exception).__name__}: {exception}"
+            sanitized_exception = formatter._mask_sensitive(str(exception))
+            error_msg += f"\n  Exception: {type(exception).__name__}: {sanitized_exception}"
 
         with open(self.error_log_path, 'a') as f:
             f.write(error_msg + '\n')
