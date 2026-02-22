@@ -49,7 +49,7 @@ if PYDANTIC_AVAILABLE:
 
         @field_validator('field')
         @classmethod
-        def validate_field(cls, v):
+        def validate_field(cls, v: str) -> str:
             """Validate field path format."""
             if not v or not isinstance(v, str):
                 raise ValueError("Field must be a non-empty string")
@@ -59,7 +59,7 @@ if PYDANTIC_AVAILABLE:
 
         @field_validator('operator')
         @classmethod
-        def validate_operator(cls, v):
+        def validate_operator(cls, v: str) -> str:
             """Validate operator is supported."""
             valid_operators = {op.value for op in OperatorType}
             if v not in valid_operators:

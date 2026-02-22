@@ -23,7 +23,7 @@ class SensitiveFormatter(logging.Formatter):
         (r'([A-Za-z0-9+/]{32,}={0,2})', r'***REDACTED***'),  # Base64-like strings
     ]
 
-    def __init__(self, fmt: str = None, datefmt: str = None):
+    def __init__(self, fmt: str | None = None, datefmt: str | None = None) -> None:
         """Initialize formatter with optional format strings."""
         super().__init__(fmt, datefmt)
 
@@ -171,26 +171,26 @@ class SessionLogger:
         }
 
     # Delegate standard logging methods to the internal logger
-    def debug(self, msg: str, *args, **kwargs):
+    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log debug message."""
         self._logger.debug(msg, *args, **kwargs)
 
-    def info(self, msg: str, *args, **kwargs):
+    def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log info message."""
         self._logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg: str, *args, **kwargs):
+    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log warning message."""
         self._logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str, *args, **kwargs):
+    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log error message."""
         self._logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str, *args, **kwargs):
+    def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log critical message."""
         self._logger.critical(msg, *args, **kwargs)
 
-    def exception(self, msg: str, *args, **kwargs):
+    def exception(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log exception message."""
         self._logger.exception(msg, *args, **kwargs)

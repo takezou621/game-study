@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from utils.time import get_timestamp_ms
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 class BaseCapture(ABC):

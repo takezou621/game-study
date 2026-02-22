@@ -44,7 +44,7 @@ if PYDANTIC_AVAILABLE:
 
         @field_validator('confidence')
         @classmethod
-        def validate_confidence(cls, v):
+        def validate_confidence(cls, v: float) -> float:
             """Validate confidence is in valid range."""
             if not 0.0 <= v <= 1.0:
                 raise ValueError("Confidence must be between 0.0 and 1.0")
