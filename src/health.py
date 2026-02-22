@@ -68,19 +68,26 @@ def _check_config() -> tuple[bool, dict[str, Any]]:
     details: dict[str, Any] = {"checks": []}
 
     try:
-        from src.config import settings
+        from pathlib import Path
 
-        # Try to access a few key settings
-        _ = settings.OPENAI_API_KEY
-        _ = settings.LOG_LEVEL
+        # Check for required config files
+        config_dir = Path("configs")
+        required_configs = ["triggers.yaml", "roi_defaults.yaml"]
+        missing_configs = []
 
-        details["checks"].append("Settings loaded successfully")
+        for config_file in required_configs:
+            config_path = config_dir / config_file
+            if not config_path.exists():
+                missing_configs.append(config_file)
+
+        if missing_configs:
+            details["checks"].append(f"Missing config files: {', '.join(missing_configs)}")
+            return False, details
+
+        details["checks"].append("All required config files present")
         return True, details
-    except ImportError as e:
-        details["checks"].append(f"Failed to import settings: {e}")
-        return False, details
     except Exception as e:
-        details["checks"].append(f"Configuration error: {e}")
+        details["checks"].append(f"Configuration check error: {e}")
         return False, details
 
 

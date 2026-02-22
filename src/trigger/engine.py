@@ -96,7 +96,7 @@ class TriggerEngine:
                     TriggerCondition(c['field'], c['operator'], c['value'])
                     for c in trigger.get('conditions', [])
                 ],
-                templates=trigger.get('templates', {}),
+                templates=trigger.get('templates') or trigger.get('template', {}),
                 cooldown_ms=trigger.get('cooldown_ms', 0),
                 interrupt_higher_priority=trigger.get('interrupt_higher_priority', False),
             )

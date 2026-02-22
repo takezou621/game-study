@@ -1065,16 +1065,34 @@ class TestRealtimeVoiceClientAdvanced:
 
     # _get_api_key tests
 
-    def test_get_api_key_from_env(self):
-        """Test _get_api_key retrieves from environment."""
+    def test_get_api_key_from_constructor(self):
+        """Test _get_api_key returns constructor-provided key."""
         from dialogue.realtime_client import RealtimeVoiceClient
         original = os.environ.get('OPENAI_API_KEY')
-        os.environ['OPENAI_API_KEY'] = 'sk-test-key'
+        os.environ['OPENAI_API_KEY'] = 'sk-env-key'
 
         try:
-            client = RealtimeVoiceClient(api_key="sk-dummy", enable_audio_output=False)
+            # Constructor key should take precedence
+            client = RealtimeVoiceClient(api_key="sk-constructor-key", enable_audio_output=False)
             api_key = client._get_api_key()
-            assert api_key == 'sk-test-key'
+            assert api_key == 'sk-constructor-key'
+        finally:
+            if original:
+                os.environ['OPENAI_API_KEY'] = original
+            else:
+                os.environ.pop('OPENAI_API_KEY', None)
+
+    def test_get_api_key_from_env_when_no_constructor_key(self):
+        """Test _get_api_key falls back to environment when no constructor key."""
+        from dialogue.realtime_client import RealtimeVoiceClient
+        original = os.environ.get('OPENAI_API_KEY')
+        os.environ['OPENAI_API_KEY'] = 'sk-env-key'
+
+        try:
+            # No constructor key, should use environment
+            client = RealtimeVoiceClient(enable_audio_output=False)
+            api_key = client._get_api_key()
+            assert api_key == 'sk-env-key'
         finally:
             if original:
                 os.environ['OPENAI_API_KEY'] = original
@@ -1082,13 +1100,14 @@ class TestRealtimeVoiceClientAdvanced:
                 os.environ.pop('OPENAI_API_KEY', None)
 
     def test_get_api_key_raises_when_missing(self):
-        """Test _get_api_key raises ValueError when missing."""
+        """Test _get_api_key raises ValueError when missing everywhere."""
         from dialogue.realtime_client import RealtimeVoiceClient
         original = os.environ.get('OPENAI_API_KEY')
         os.environ.pop('OPENAI_API_KEY', None)
 
         try:
-            client = RealtimeVoiceClient(api_key="sk-dummy", enable_audio_output=False)
+            # No key provided anywhere, client is disabled
+            client = RealtimeVoiceClient(enable_audio_output=False)
             with pytest.raises(ValueError, match="API key not found"):
                 client._get_api_key()
         finally:

@@ -157,9 +157,9 @@ class RealtimeVoiceClient:
             logger.warning("API key format appears invalid (should start with 'sk-')")
 
         self._api_key_validated = True
+        self._resolved_api_key = resolved_api_key  # Store for realtime API connection
         self.client = AsyncOpenAI(api_key=resolved_api_key)
         self.enabled = True
-        # API key is not stored in instance variables after initialization
 
         # WebSocket connection
         self.ws: Any | None = None
@@ -184,7 +184,7 @@ class RealtimeVoiceClient:
 
     def _get_api_key(self) -> str:
         """
-        Get API key from environment.
+        Get API key from stored value or environment.
 
         Returns:
             API key string
@@ -192,9 +192,15 @@ class RealtimeVoiceClient:
         Raises:
             ValueError: If API key is not available
         """
+        # First check stored key from constructor
+        api_key = getattr(self, '_resolved_api_key', None)
+        if api_key:
+            return api_key
+
+        # Fall back to environment
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ValueError("OpenAI API key not found in environment")
+            raise ValueError("OpenAI API key not found in environment or constructor")
         return api_key
 
     def _load_system_prompt(self, path: str | None) -> str:
