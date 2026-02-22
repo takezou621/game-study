@@ -35,3 +35,17 @@ service-account.json
 samples/test_video.mp4
 # Keep unit tests in tests/ directory
 !tests/
+
+# Test coverage
+.coverage
+coverage.xml
+
+# Build artifacts
+*.egg-info/
+output/
+artifacts/
+dist/
+build/
+
+# Temporary review files
+REVIEW_BODY.md

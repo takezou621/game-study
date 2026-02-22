@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3.11
+  python: python3.14
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -25,7 +25,7 @@ repos:
     rev: 24.8.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3.14
         args: [--line-length=100]
 
   - repo: https://github.com/PyCQA/isort
@@ -48,4 +48,4 @@ repos:
           - pydantic>=2.0.0
           - types-PyYAML
         args: [--ignore-missing-imports]
-        exclude: ^tests/
+        exclude: ^tests/|^test_
