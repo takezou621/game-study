@@ -4,9 +4,12 @@
 import argparse
 import logging
 import sys
-import os
 from pathlib import Path
-from typing import Optional
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 # Configure logging
 logging.basicConfig(
@@ -19,27 +22,31 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).parent))
 
 from capture.video_file import VideoFileCapture
-from vision.roi import ROIExtractor
-from vision.anchors import AnchorDetector
-from vision.yolo_detector import YOLODetector
-from vision.ocr import OCRDetector
-from vision.state_builder import StateBuilder
-from trigger.engine import TriggerEngine
-from dialogue.templates import DialogueTemplateManager
-from dialogue.openai_client import OpenAIClient
-from dialogue.realtime_client import RealtimeVoiceClient
-from utils.logger import SessionLogger
-from utils.time import get_timestamp_ms
 from constants import (
     DEFAULT_ROI_CONFIG,
-    DEFAULT_TRIGGERS_CONFIG,
     DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_TRIGGERS_CONFIG,
     LOG_INTERVAL_FRAMES,
 )
+from dialogue.openai_client import OpenAIClient
+from dialogue.realtime_client import RealtimeVoiceClient
+from dialogue.templates import DialogueTemplateManager
+from trigger.engine import TriggerEngine
+from utils.logger import SessionLogger
+from vision.anchors import AnchorDetector
+from vision.ocr import OCRDetector
+from vision.roi import ROIExtractor
+from vision.state_builder import StateBuilder
+from vision.yolo_detector import YOLODetector
 
 
-def parse_args():
-    """Parse command line arguments."""
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command line arguments.
+
+    Returns:
+        Parsed command line arguments as Namespace object.
+    """
     parser = argparse.ArgumentParser(
         description="Fortnite AI Coach for English Learning"
     )
@@ -95,8 +102,19 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    """Main entry point."""
+def main() -> None:
+    """
+    Main entry point for the game-study application.
+
+    Initializes all components, processes video input, evaluates triggers,
+    and generates AI coach responses with optional voice output.
+
+    Environment variables are loaded from .env file if present.
+    """
+    # Load environment variables from .env file if available
+    if load_dotenv is not None:
+        load_dotenv()
+
     args = parse_args()
 
     # Initialize logger

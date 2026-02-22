@@ -1,8 +1,7 @@
 """Score calculation logic for review functionality."""
 
-import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from review.stats import SessionStatistics
 from utils.logger import get_logger
@@ -17,7 +16,7 @@ class CategoryScore:
     name: str
     score: float  # 0-100
     weight: float  # Weight in overall score
-    details: Dict[str, Any]
+    details: dict[str, Any]
 
     def __str__(self) -> str:
         return f"{self.name}: {self.score:.1f}/100"
@@ -28,11 +27,11 @@ class OverallScore:
     """Overall score with category breakdown."""
 
     total_score: float  # 0-100
-    categories: List[CategoryScore]
+    categories: list[CategoryScore]
     grade: str  # A, B, C, D, F
     summary: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "total_score": round(self.total_score, 1),
@@ -70,7 +69,7 @@ class ScoreCalculator:
         "strategic_thinking": 0.35,
     }
 
-    def __init__(self, custom_weights: Optional[Dict[str, float]] = None):
+    def __init__(self, custom_weights: dict[str, float] | None = None):
         """
         Initialize score calculator.
 
@@ -408,7 +407,7 @@ class ScoreCalculator:
         else:
             return "F"
 
-    def _generate_summary(self, total_score: float, categories: List[CategoryScore]) -> str:
+    def _generate_summary(self, total_score: float, categories: list[CategoryScore]) -> str:
         """
         Generate summary text for the score.
 
@@ -443,7 +442,7 @@ class ScoreCalculator:
             f"Focus on improving: {weakest.name} ({weakest.score:.1f}/100)."
         )
 
-    def _get_top_words(self, frequency: Dict[str, int], limit: int) -> List[Dict[str, Any]]:
+    def _get_top_words(self, frequency: dict[str, int], limit: int) -> list[dict[str, Any]]:
         """
         Get top most frequent words.
 

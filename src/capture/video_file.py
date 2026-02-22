@@ -1,9 +1,10 @@
 """Video file capture using OpenCV."""
 
-import cv2
 from pathlib import Path
-from typing import Optional, Tuple
+
+import cv2
 import numpy as np
+
 from .base import BaseCapture
 
 
@@ -17,12 +18,13 @@ class VideoFileCapture(BaseCapture):
         Args:
             video_path: Path to video file
         """
+        super().__init__()
         self.video_path = Path(video_path)
         self.cap = None
         self.fps = 0
         self.width = 0
         self.height = 0
-        self.frame_count = 0
+        # frame_count is already set by super().__init__()
 
         if not self.video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -47,7 +49,7 @@ class VideoFileCapture(BaseCapture):
             self.cap = None
             self.is_opened = False
 
-    def read_frame(self) -> Tuple[bool, Optional[np.ndarray]]:
+    def read_frame(self) -> tuple[bool, np.ndarray | None]:
         """
         Read next frame from video.
 
@@ -62,7 +64,7 @@ class VideoFileCapture(BaseCapture):
             self._update_fps()
         return ret, frame if ret else None
 
-    def read(self) -> Optional[np.ndarray]:
+    def read(self) -> np.ndarray | None:
         """
         Read next frame from video.
 
@@ -72,7 +74,7 @@ class VideoFileCapture(BaseCapture):
         ret, frame = self.read_frame()
         return frame if ret else None
 
-    def get_frame_at(self, frame_index: int) -> Optional[np.ndarray]:
+    def get_frame_at(self, frame_index: int) -> np.ndarray | None:
         """
         Get frame at specific index.
 

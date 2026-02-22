@@ -13,7 +13,7 @@ import platform
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 try:
     import psutil
@@ -21,8 +21,8 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 
-from utils.logger import get_logger
 from utils.exceptions import GameStudyError
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -53,10 +53,10 @@ class CheckResult:
     status: CheckStatus
     message: str
     timestamp: float = field(default_factory=time.time)
-    details: Dict[str, Any] = field(default_factory=dict)
-    remediation: Optional[str] = None
+    details: dict[str, Any] = field(default_factory=dict)
+    remediation: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "component": self.component.value,
@@ -74,12 +74,12 @@ class SystemInfo:
     os: str
     os_version: str
     python_version: str
-    cpu_count: Optional[int] = None
-    total_memory_gb: Optional[float] = None
-    available_memory_gb: Optional[float] = None
-    disk_usage_percent: Optional[float] = None
+    cpu_count: int | None = None
+    total_memory_gb: float | None = None
+    available_memory_gb: float | None = None
+    disk_usage_percent: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "os": self.os,
@@ -110,9 +110,9 @@ class SystemDiagnosticsError(GameStudyError):
     def __init__(
         self,
         message: str,
-        component: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        component: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         context = context or {}
         context.update({"component": component})
@@ -141,7 +141,7 @@ class AudioDeviceChecker:
         except ImportError:
             pass
 
-    def get_available_devices(self) -> Tuple[List[DeviceInfo], List[DeviceInfo]]:
+    def get_available_devices(self) -> tuple[list[DeviceInfo], list[DeviceInfo]]:
         """Get available input and output audio devices.
 
         Returns:
@@ -209,7 +209,7 @@ class AudioDeviceChecker:
 
         return input_devices, output_devices
 
-    async def check_microphone(self, device_index: Optional[int] = None) -> CheckResult:
+    async def check_microphone(self, device_index: int | None = None) -> CheckResult:
         """Check if microphone is accessible.
 
         Args:
@@ -289,7 +289,7 @@ class AudioDeviceChecker:
                     data = stream.read(1024, exception_on_overflow=False)
                     stream.close()
                     return True
-                except Exception as e:
+                except Exception:
                     raise
 
             await loop.run_in_executor(None, test_stream)
@@ -306,14 +306,14 @@ class AudioDeviceChecker:
                 }
             )
 
-        except IOError as e:
+        except OSError as e:
             return CheckResult(
                 component=SystemComponent.MICROPHONE,
                 status=CheckStatus.FAILED,
                 message=f"Cannot access microphone: {e}",
                 remediation="Check microphone permissions (macOS: System Preferences > Privacy)"
             )
-        except Exception as e:
+        except Exception:
             raise
 
     async def _check_sounddevice_microphone(self, device: DeviceInfo) -> CheckResult:
@@ -347,10 +347,10 @@ class AudioDeviceChecker:
                 }
             )
 
-        except Exception as e:
+        except Exception:
             raise
 
-    async def check_speaker(self, device_index: Optional[int] = None) -> CheckResult:
+    async def check_speaker(self, device_index: int | None = None) -> CheckResult:
         """Check if speaker is accessible.
 
         Args:
@@ -438,7 +438,7 @@ class AudioDeviceChecker:
                     stream.write(silence)
                     stream.close()
                     return True
-                except Exception as e:
+                except Exception:
                     raise
 
             await loop.run_in_executor(None, test_stream)
@@ -455,14 +455,14 @@ class AudioDeviceChecker:
                 }
             )
 
-        except Exception as e:
+        except Exception:
             raise
 
 
 class NetworkChecker:
     """Checks network connectivity and performance."""
 
-    def __init__(self, test_hosts: Optional[List[str]] = None):
+    def __init__(self, test_hosts: list[str] | None = None):
         """Initialize network checker.
 
         Args:
@@ -474,7 +474,7 @@ class NetworkChecker:
             "1.1.1.1"   # Cloudflare DNS
         ]
 
-    async def check_connectivity(self, host: str, timeout: float = 5.0) -> Tuple[bool, float]:
+    async def check_connectivity(self, host: str, timeout: float = 5.0) -> tuple[bool, float]:
         """Check connectivity to a host.
 
         Args:
@@ -861,7 +861,7 @@ class SystemDiagnostics:
         self,
         min_memory_gb: float = 1.0,
         min_disk_percent: float = 90.0,
-        test_hosts: Optional[List[str]] = None
+        test_hosts: list[str] | None = None
     ):
         """Initialize system diagnostics.
 
@@ -875,9 +875,9 @@ class SystemDiagnostics:
         self.performance_checker = PerformanceChecker(min_memory_gb, min_disk_percent)
         self.permission_checker = PermissionChecker()
 
-        self._check_results: List[CheckResult] = []
+        self._check_results: list[CheckResult] = []
 
-    async def run_all_checks(self) -> List[CheckResult]:
+    async def run_all_checks(self) -> list[CheckResult]:
         """Run all diagnostic checks.
 
         Returns:
@@ -916,7 +916,7 @@ class SystemDiagnostics:
         self._check_results = results
         return results
 
-    async def check_audio_devices(self) -> List[CheckResult]:
+    async def check_audio_devices(self) -> list[CheckResult]:
         """Check only audio devices.
 
         Returns:
@@ -953,7 +953,7 @@ class SystemDiagnostics:
         """
         return self.performance_checker.get_system_info()
 
-    def get_check_results(self) -> List[CheckResult]:
+    def get_check_results(self) -> list[CheckResult]:
         """Get results from last check run.
 
         Returns:
@@ -961,7 +961,7 @@ class SystemDiagnostics:
         """
         return self._check_results
 
-    def get_failed_checks(self) -> List[CheckResult]:
+    def get_failed_checks(self) -> list[CheckResult]:
         """Get only failed checks from last run.
 
         Returns:
@@ -969,7 +969,7 @@ class SystemDiagnostics:
         """
         return [r for r in self._check_results if r.status == CheckStatus.FAILED]
 
-    def get_warning_checks(self) -> List[CheckResult]:
+    def get_warning_checks(self) -> list[CheckResult]:
         """Get only warning checks from last run.
 
         Returns:
@@ -981,7 +981,7 @@ class SystemDiagnostics:
 async def create_system_diagnostics(
     min_memory_gb: float = 1.0,
     min_disk_percent: float = 90.0,
-    test_hosts: Optional[List[str]] = None
+    test_hosts: list[str] | None = None
 ) -> SystemDiagnostics:
     """Create a SystemDiagnostics instance.
 

@@ -1,0 +1,74 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+docs/
+
+# Logs
+logs/
+*.log
+
+# Output
+output/
+samples/
+
+# Development files
+test_*.py
+create_test_video.py
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+
+# OS
+.DS_Store
+Thumbs.db

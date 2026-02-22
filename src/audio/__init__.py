@@ -9,35 +9,33 @@ This module provides comprehensive audio functionality including:
 
 from audio.capture import (
     AudioCapture,
+    AudioCaptureError,
     AudioConfig,
     AudioFrame,
-    AudioCaptureError,
     CaptureState,
     SpeechSegment,
     create_audio_capture,
 )
-
-from audio.vad import (
-    VoiceActivityDetector,
-    VADModel,
-    VADResult,
-    VADConfig,
-    StreamingVAD,
-    VADError,
-    VADNotAvailableError,
-    create_vad,
-)
-
 from audio.stt_client import (
-    STTClient,
-    STTModel,
-    STTLanguage,
-    STTConfig,
-    TranscriptionResult,
     PartialTranscription,
     StreamingSTT,
+    STTClient,
     STTClientError,
+    STTConfig,
+    STTLanguage,
+    STTModel,
+    TranscriptionResult,
     create_stt_client,
+)
+from audio.vad import (
+    StreamingVAD,
+    VADConfig,
+    VADError,
+    VADModel,
+    VADNotAvailableError,
+    VADResult,
+    VoiceActivityDetector,
+    create_vad,
 )
 
 __all__ = [

@@ -1,6 +1,5 @@
 """Tests for StateBuilder."""
 
-import pytest
 from vision.state_builder import StateBuilder
 
 

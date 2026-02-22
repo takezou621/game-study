@@ -1,10 +1,11 @@
 """Real-time screen capture using MSS."""
 
-import time
-import threading
 import queue
+import threading
+import time
+from collections.abc import Iterator
+
 import numpy as np
-from typing import Optional, Iterator, Tuple
 
 try:
     import mss
@@ -25,11 +26,11 @@ class ScreenCapture(BaseCapture):
     def __init__(
         self,
         monitor: int = 1,
-        monitor_id: Optional[int] = None,
+        monitor_id: int | None = None,
         target_fps: int = 60,
         buffer_size: int = 10,
-        capture_region: Optional[Tuple[int, int, int, int]] = None,
-        max_width: Optional[int] = None
+        capture_region: tuple[int, int, int, int] | None = None,
+        max_width: int | None = None
     ):
         """
         Initialize screen capture.
@@ -158,7 +159,7 @@ class ScreenCapture(BaseCapture):
             if elapsed < self.frame_time:
                 time.sleep(self.frame_time - elapsed)
 
-    def _capture_frame(self) -> Optional[np.ndarray]:
+    def _capture_frame(self) -> np.ndarray | None:
         """
         Capture single frame from screen.
 
@@ -181,11 +182,11 @@ class ScreenCapture(BaseCapture):
 
             return frame
 
-        except Exception as e:
+        except Exception:
             # Capture failed
             return None
 
-    def read(self) -> Optional[np.ndarray]:
+    def read(self) -> np.ndarray | None:
         """
         Read frame from buffer (blocking).
 
@@ -202,7 +203,7 @@ class ScreenCapture(BaseCapture):
         except queue.Empty:
             return None
 
-    def read_latest_frame(self) -> Optional[np.ndarray]:
+    def read_latest_frame(self) -> np.ndarray | None:
         """
         Read latest frame from buffer (non-blocking).
 

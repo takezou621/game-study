@@ -3,9 +3,8 @@
 Implements a Token Bucket algorithm to control the rate of API calls.
 """
 
-import time
 import threading
-from typing import Optional
+import time
 
 
 class RateLimiter:
@@ -20,7 +19,7 @@ class RateLimiter:
         self,
         max_calls: int,
         period_seconds: float,
-        bucket_capacity: Optional[int] = None
+        bucket_capacity: int | None = None
     ):
         """
         Initialize rate limiter.
@@ -70,7 +69,7 @@ class RateLimiter:
 
             return False
 
-    def wait_for_token(self, timeout: Optional[float] = None) -> bool:
+    def wait_for_token(self, timeout: float | None = None) -> bool:
         """
         Wait until a token is available.
 
@@ -132,7 +131,7 @@ class AsyncRateLimiter:
         self,
         max_calls: int,
         period_seconds: float,
-        bucket_capacity: Optional[int] = None
+        bucket_capacity: int | None = None
     ):
         """
         Initialize async rate limiter.
@@ -181,7 +180,7 @@ class AsyncRateLimiter:
 
             return False
 
-    async def wait_for_token(self, timeout: Optional[float] = None) -> bool:
+    async def wait_for_token(self, timeout: float | None = None) -> bool:
         """
         Wait until a token is available (async).
 

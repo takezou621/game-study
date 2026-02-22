@@ -5,43 +5,43 @@ to maintain backward compatibility with existing imports.
 """
 
 from src.exceptions import (
-    # Base
-    GameStudyError,
-    # Vision
-    VisionError,
-    OCRError,
-    DetectionError,
-    ROIExtractionError,
-    # Trigger
-    TriggerError,
-    TriggerConfigError,
-    TriggerEvaluationError,
-    # Dialogue
-    DialogueError,
     APIError,
-    RateLimitExceeded,
-    RateLimitError,
-    OpenAIError,
-    TTSError,
+    AuthenticationError,
     # Capture
     CaptureError,
-    VideoCaptureError,
-    ScreenCaptureError,
-    # WebRTC
-    WebRTCError,
-    AuthenticationError,
-    ConnectionError,
-    # WebSocket
-    WebSocketError,
     # Config
     ConfigError,
     ConfigurationError,
+    ConnectionError,
+    DetectionError,
+    # Diagnostics
+    DiagnosticsError,
+    # Dialogue
+    DialogueError,
     FileNotFoundError,
+    # Base
+    GameStudyError,
     InvalidConfigError,
     # Model
     ModelLoadError,
-    # Diagnostics
-    DiagnosticsError,
+    OCRError,
+    OpenAIError,
+    RateLimitError,
+    RateLimitExceeded,
+    ROIExtractionError,
+    ScreenCaptureError,
+    TriggerConfigError,
+    # Trigger
+    TriggerError,
+    TriggerEvaluationError,
+    TTSError,
+    VideoCaptureError,
+    # Vision
+    VisionError,
+    # WebRTC
+    WebRTCError,
+    # WebSocket
+    WebSocketError,
 )
 
 __all__ = [

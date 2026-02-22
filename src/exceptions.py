@@ -6,8 +6,7 @@ and differentiation of error types.
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 # ============================================================================
 # Base Exception
@@ -21,13 +20,16 @@ class GameStudyError(Exception):
         context: Dictionary with additional error context
         cause: Original exception that caused this error
         timestamp: When the error occurred
+        error_code: Unique error code for this exception type
     """
+
+    error_code: str = "GS000"
 
     def __init__(
         self,
         message: str,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize GameStudyError.
 
@@ -55,7 +57,7 @@ class GameStudyError(Exception):
 
         return " ".join(parts)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for logging."""
         return {
             "type": self.__class__.__name__,
@@ -63,6 +65,18 @@ class GameStudyError(Exception):
             "context": self.context,
             "cause": type(self.cause).__name__ if self.cause else None,
             "timestamp": self.timestamp.isoformat(),
+        }
+
+    def to_json(self) -> dict[str, Any]:
+        """Convert exception to JSON-serializable dictionary for API responses.
+
+        Returns:
+            Dictionary containing error_code, error_type, and message.
+        """
+        return {
+            "error_code": self.error_code,
+            "error_type": self.__class__.__name__,
+            "message": str(self),
         }
 
     def log(self, level: int = logging.ERROR) -> None:
@@ -95,13 +109,15 @@ class VisionError(GameStudyError):
         frame_shape: Shape of the frame being processed
     """
 
+    error_code: str = "GS100"
+
     def __init__(
         self,
         message: str,
-        detection_type: Optional[str] = None,
-        frame_shape: Optional[tuple] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        detection_type: str | None = None,
+        frame_shape: tuple | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize VisionError.
 
@@ -125,16 +141,22 @@ class VisionError(GameStudyError):
 
 class OCRError(VisionError):
     """Error during OCR processing."""
+
+    error_code: str = "GS101"
     pass
 
 
 class DetectionError(VisionError):
     """Error during object detection."""
+
+    error_code: str = "GS102"
     pass
 
 
 class ROIExtractionError(VisionError):
     """Error extracting ROI from frame."""
+
+    error_code: str = "GS103"
     pass
 
 
@@ -144,16 +166,22 @@ class ROIExtractionError(VisionError):
 
 class TriggerError(GameStudyError):
     """Base exception for trigger-related errors."""
+
+    error_code: str = "GS200"
     pass
 
 
 class TriggerConfigError(TriggerError):
     """Error in trigger configuration."""
+
+    error_code: str = "GS201"
     pass
 
 
 class TriggerEvaluationError(TriggerError):
     """Error during trigger evaluation."""
+
+    error_code: str = "GS202"
     pass
 
 
@@ -163,6 +191,8 @@ class TriggerEvaluationError(TriggerError):
 
 class DialogueError(GameStudyError):
     """Base exception for dialogue-related errors."""
+
+    error_code: str = "GS300"
     pass
 
 
@@ -176,15 +206,17 @@ class APIError(DialogueError):
         retry_after: Suggested wait time before retry (seconds)
     """
 
+    error_code: str = "GS301"
+
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        endpoint: Optional[str] = None,
+        status_code: int | None = None,
+        endpoint: str | None = None,
         retryable: bool = False,
-        retry_after: Optional[float] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        retry_after: float | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize API error.
 
@@ -251,14 +283,16 @@ class RateLimitExceeded(APIError):
         remaining: Remaining requests (if available)
     """
 
+    error_code: str = "GS302"
+
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        cause: Optional[Exception] = None,
+        cause: Exception | None = None,
         retry_after: float = 60.0,
-        limit: Optional[str] = None,
-        remaining: Optional[int] = None,
-        context: Optional[Dict[str, Any]] = None
+        limit: str | None = None,
+        remaining: int | None = None,
+        context: dict[str, Any] | None = None
     ):
         """Initialize rate limit error.
 
@@ -296,11 +330,15 @@ RateLimitError = RateLimitExceeded
 
 class OpenAIError(APIError):
     """Error from OpenAI API."""
+
+    error_code: str = "GS303"
     pass
 
 
 class TTSError(DialogueError):
     """Error during text-to-speech synthesis."""
+
+    error_code: str = "GS304"
     pass
 
 
@@ -319,13 +357,15 @@ class CaptureError(GameStudyError):
         monitor: Monitor number or identifier
     """
 
+    error_code: str = "GS400"
+
     def __init__(
         self,
         message: str,
-        capture_type: Optional[str] = None,
-        monitor: Optional[int] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        capture_type: str | None = None,
+        monitor: int | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize CaptureError.
 
@@ -349,11 +389,15 @@ class CaptureError(GameStudyError):
 
 class VideoCaptureError(CaptureError):
     """Error capturing video."""
+
+    error_code: str = "GS401"
     pass
 
 
 class ScreenCaptureError(CaptureError):
     """Error capturing screen."""
+
+    error_code: str = "GS402"
     pass
 
 
@@ -363,16 +407,22 @@ class ScreenCaptureError(CaptureError):
 
 class WebRTCError(GameStudyError):
     """Base exception for WebRTC-related errors."""
+
+    error_code: str = "GS500"
     pass
 
 
 class AuthenticationError(WebRTCError):
     """Authentication failed."""
+
+    error_code: str = "GS501"
     pass
 
 
 class ConnectionError(WebRTCError):
     """WebRTC connection error."""
+
+    error_code: str = "GS502"
     pass
 
 
@@ -391,13 +441,15 @@ class WebSocketError(GameStudyError):
         state: Connection state when error occurred
     """
 
+    error_code: str = "GS600"
+
     def __init__(
         self,
         message: str,
-        url: Optional[str] = None,
-        state: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        url: str | None = None,
+        state: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize WebSocketError.
 
@@ -431,13 +483,15 @@ class ConfigError(GameStudyError):
         config_file: Configuration file path (if applicable)
     """
 
+    error_code: str = "GS700"
+
     def __init__(
         self,
         message: str,
-        config_key: Optional[str] = None,
-        config_file: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        config_key: str | None = None,
+        config_file: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize ConfigError.
 
@@ -465,11 +519,15 @@ ConfigurationError = ConfigError
 
 class FileNotFoundError(ConfigError):
     """Configuration file not found."""
+
+    error_code: str = "GS701"
     pass
 
 
 class InvalidConfigError(ConfigError):
     """Invalid configuration value."""
+
+    error_code: str = "GS702"
     pass
 
 
@@ -488,13 +546,15 @@ class ModelLoadError(GameStudyError):
         model_type: Type of model (e.g., "yolo", "tesseract")
     """
 
+    error_code: str = "GS800"
+
     def __init__(
         self,
         message: str,
-        model_path: Optional[str] = None,
-        model_type: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        model_path: str | None = None,
+        model_type: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize ModelLoadError.
 
@@ -530,12 +590,14 @@ class DiagnosticsError(GameStudyError):
         check_type: Type of diagnostic check that failed
     """
 
+    error_code: str = "GS900"
+
     def __init__(
         self,
         message: str,
-        check_type: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        check_type: str | None = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None
     ):
         """Initialize DiagnosticsError.
 

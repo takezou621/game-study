@@ -23,6 +23,12 @@ logs/sessions/*
 
 # Environment variables
 .env
+.env.*
+secrets/
+*.pem
+*.key
+credentials.json
+service-account.json
 
 # Test files
 *.mp4

@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -57,7 +57,7 @@ class VADConfig:
     frame_size_ms: int = 30  # Frame duration in ms
     threshold: float = 0.5  # Speech probability threshold
     use_silero: bool = False  # Prefer silero if available
-    silero_model_path: Optional[str] = None  # Path to silero model
+    silero_model_path: str | None = None  # Path to silero model
 
 
 class VoiceActivityDetector:
@@ -83,7 +83,7 @@ class VoiceActivityDetector:
         self,
         sample_rate: int = 16000,
         frame_size_ms: int = 30,
-        model: Optional[VADModel] = None,
+        model: VADModel | None = None,
         threshold: float = 0.5
     ):
         """
@@ -104,9 +104,9 @@ class VoiceActivityDetector:
 
         # Backend
         self._model = model
-        self._backend: Optional[str] = None
-        self._vad: Optional[Any] = None
-        self._silero_model: Optional[Any] = None
+        self._backend: str | None = None
+        self._vad: Any | None = None
+        self._silero_model: Any | None = None
         self._lock = threading.Lock()
 
         # Energy-based VAD state
@@ -171,8 +171,8 @@ class VoiceActivityDetector:
     def process_stream(
         self,
         audio_stream: np.ndarray,
-        frame_size_ms: Optional[int] = None
-    ) -> List[VADResult]:
+        frame_size_ms: int | None = None
+    ) -> list[VADResult]:
         """
         Process a stream of audio data.
 
@@ -374,7 +374,7 @@ class StreamingVAD:
 
         # State
         self._in_speech = False
-        self._speech_start_time: Optional[float] = None
+        self._speech_start_time: float | None = None
         self._silence_frames = 0
         self._speech_frames = 0
 
@@ -422,7 +422,7 @@ class StreamingVAD:
         """Check if currently in speech segment."""
         return self._in_speech
 
-    def get_speech_duration_ms(self) -> Optional[float]:
+    def get_speech_duration_ms(self) -> float | None:
         """Get current speech segment duration in ms."""
         if self._speech_start_time is None:
             return None
@@ -438,7 +438,7 @@ class StreamingVAD:
 
 def create_vad(
     sample_rate: int = 16000,
-    model: Optional[VADModel] = None,
+    model: VADModel | None = None,
     threshold: float = 0.5
 ) -> VoiceActivityDetector:
     """

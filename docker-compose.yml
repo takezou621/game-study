@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Production service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: game-study:latest
+    container_name: game-study-prod
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENV=production
+      # Add OpenAI API key if needed
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      # Mount config files and output directory
+      - ./configs:/app/configs:ro
+      - ./output:/app/output
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Development service with hot reload
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: game-study:dev
+    container_name: game-study-dev
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENV=development
+      - PYTHONPATH=/app/src
+    volumes:
+      # Mount entire source directory for hot reload
+      - .:/app
+      # Exclude virtual environment
+      - /app/.venv
+      - /app/venv
+    working_dir: /app
+    command: tail -f /dev/null  # Override with actual command as needed
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+  # Test service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: game-study:dev
+    container_name: game-study-test
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENV=test
+      - PYTHONPATH=/app/src
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/venv
+    working_dir: /app
+    command: pytest tests/ -v --cov=src --cov-report=term-missing
+    profiles:
+      - test
+
+  # Optional WebRTC signaling server
+  signaling:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: game-study-signaling
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8080:8080"
+    command: ["python", "-m", "src.utils.webrtc"]
+    restart: unless-stopped
+    profiles:
+      - signaling

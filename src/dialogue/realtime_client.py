@@ -1,16 +1,16 @@
 """OpenAI Realtime API client for voice conversation."""
 
+import asyncio
+import base64
+import json
 import logging
 import os
-import asyncio
-import json
-import time
-import base64
 import threading
-from typing import Dict, Any, Optional, Callable, List
+import time
 from dataclasses import dataclass, field
-from queue import Queue, Empty
 from enum import Enum
+from queue import Empty, Queue
+from typing import Any
 
 try:
     from openai import AsyncOpenAI
@@ -50,8 +50,8 @@ class SpeechState(Enum):
 class VoiceResponse:
     """Voice response from Realtime API."""
     text: str
-    audio_data: Optional[bytes] = None
-    duration_ms: Optional[int] = None
+    audio_data: bytes | None = None
+    duration_ms: int | None = None
     timestamp: float = None
     priority: int = 2
     interrupted: bool = False
@@ -98,10 +98,10 @@ class RealtimeVoiceClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4o-realtime-preview-2024-12-17",
         voice: str = "alloy",
-        system_prompt_path: Optional[str] = None,
+        system_prompt_path: str | None = None,
         cooldown_ms: int = DEFAULT_COOLDOWN_MS,
         max_response_length_ms: int = DEFAULT_MAX_RESPONSE_LENGTH_MS,
         enable_audio_output: bool = True,
@@ -119,6 +119,9 @@ class RealtimeVoiceClient:
             max_response_length_ms: Maximum response duration
             enable_audio_output: Enable audio output (True) or text-only (False)
             use_realtime_api: Use Realtime API (True) or TTS API (False)
+
+        Raises:
+            ValueError: If API key is not available when required
         """
         self.model = model
         self.voice = voice
@@ -135,8 +138,8 @@ class RealtimeVoiceClient:
         self.interrupt_requested = False
 
         # Client initialization
-        self.client: Optional[AsyncOpenAI] = None
-        self._api_key: Optional[str] = None  # Internal use only
+        self.client: AsyncOpenAI | None = None
+        self._api_key_validated = False  # Track if API key was validated
 
         if not OPENAI_AVAILABLE:
             self.enabled = False
@@ -146,25 +149,31 @@ class RealtimeVoiceClient:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not resolved_api_key:
             self.enabled = False
+            logger.warning("OpenAI API key not found - voice features disabled")
             return
 
-        self._api_key = resolved_api_key
+        # Validate API key format
+        if resolved_api_key and not resolved_api_key.startswith('sk-'):
+            logger.warning("API key format appears invalid (should start with 'sk-')")
+
+        self._api_key_validated = True
         self.client = AsyncOpenAI(api_key=resolved_api_key)
         self.enabled = True
+        # API key is not stored in instance variables after initialization
 
         # WebSocket connection
-        self.ws: Optional[Any] = None
+        self.ws: Any | None = None
         self.ws_connected = False
         self.ws_lock = threading.Lock()
 
         # Audio playback queue
         self.audio_queue: Queue[AudioChunk] = Queue()
-        self.playback_thread: Optional[threading.Thread] = None
+        self.playback_thread: threading.Thread | None = None
         self.playback_running = False
 
         # Event loop for async operations
-        self.loop: Optional[asyncio.AbstractEventLoop] = None
-        self._loop_thread: Optional[threading.Thread] = None
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self._loop_thread: threading.Thread | None = None
 
         # Response queue for async responses
         self.response_queue: Queue[VoiceResponse] = Queue()
@@ -173,10 +182,25 @@ class RealtimeVoiceClient:
         if self.enabled:
             self._start_event_loop()
 
-    def _load_system_prompt(self, path: Optional[str]) -> str:
+    def _get_api_key(self) -> str:
+        """
+        Get API key from environment.
+
+        Returns:
+            API key string
+
+        Raises:
+            ValueError: If API key is not available
+        """
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OpenAI API key not found in environment")
+        return api_key
+
+    def _load_system_prompt(self, path: str | None) -> str:
         """Load system prompt from file."""
         if path and os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, encoding='utf-8') as f:
                 return f.read()
 
         return """You are an AI English teacher and gaming coach for Fortnite players.
@@ -217,9 +241,9 @@ During combat, ALWAYS use the shortest possible response:
 
     def _get_short_response(
         self,
-        trigger_info: Dict[str, Any],
+        trigger_info: dict[str, Any],
         movement_state: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get short response for combat situations.
 
@@ -255,8 +279,10 @@ During combat, ALWAYS use the shortest possible response:
 
         try:
             url = "wss://api.openai.com/v1/realtime"
+            # Get API key dynamically from environment for WebSocket connection
+            api_key = self._get_api_key()
             headers = [
-                ("Authorization", f"Bearer {self.api_key}"),
+                ("Authorization", f"Bearer {api_key}"),
                 ("OpenAI-Beta", "realtime=v1")
             ]
 
@@ -375,10 +401,7 @@ During combat, ALWAYS use the shortest possible response:
                         audio_base64 = event.get("delta", "")
                         audio_chunks.append(base64.b64decode(audio_base64))
 
-                    elif event_type == "response.audio.done":
-                        break
-
-                    elif event_type == "response.done":
+                    elif event_type == "response.audio.done" or event_type == "response.done":
                         break
 
                     # Timeout check
@@ -401,7 +424,7 @@ During combat, ALWAYS use the shortest possible response:
             )
 
         except Exception as e:
-            print(f"Realtime API error: {e}")
+            logger.error("Realtime API error: %s", e)
             return await self._generate_speech_tts(text)
 
     async def _cancel_response(self):
@@ -452,7 +475,7 @@ During combat, ALWAYS use the shortest possible response:
         text: str,
         priority: int = 2,
         allow_interrupt: bool = True
-    ) -> Optional[VoiceResponse]:
+    ) -> VoiceResponse | None:
         """
         Speak text with voice synthesis.
 
@@ -499,7 +522,7 @@ During combat, ALWAYS use the shortest possible response:
             return response
 
         except Exception as e:
-            print(f"Speech generation failed: {e}")
+            logger.error("Speech generation failed: %s", e)
             self.speech_state = SpeechState.IDLE
             return VoiceResponse(text=text)
 
@@ -516,10 +539,10 @@ During combat, ALWAYS use the shortest possible response:
 
     def speak_with_trigger(
         self,
-        trigger_info: Dict[str, Any],
-        state: Dict[str, Any],
+        trigger_info: dict[str, Any],
+        state: dict[str, Any],
         movement_state: str
-    ) -> Optional[VoiceResponse]:
+    ) -> VoiceResponse | None:
         """
         Generate and speak response based on trigger.
 
@@ -562,7 +585,7 @@ During combat, ALWAYS use the shortest possible response:
     def _enhance_template(
         self,
         template: str,
-        state: Dict[str, Any],
+        state: dict[str, Any],
         movement_state: str
     ) -> str:
         """Enhance template with state information."""
@@ -639,7 +662,7 @@ During combat, ALWAYS use the shortest possible response:
 
 
 def create_voice_client(
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     voice: str = "alloy",
     enable_audio: bool = True,
     use_realtime: bool = True

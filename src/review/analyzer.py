@@ -1,10 +1,8 @@
 """Weakness analysis engine for review functionality."""
 
-import logging
-import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from review.stats import SessionStatistics
 from utils.logger import get_logger
@@ -46,7 +44,7 @@ class PhrasePattern:
 
     phrase: str
     count: int
-    contexts: List[str] = field(default_factory=list)
+    contexts: list[str] = field(default_factory=list)
     first_used: int = 0  # timestamp_ms
     last_used: int = 0  # timestamp_ms
 
@@ -59,7 +57,7 @@ class WeaknessPoint:
     severity: str  # "critical", "moderate", "minor"
     description: str
     suggestion: str
-    evidence: List[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
     affected_speeches: int = 0
 
 
@@ -69,20 +67,20 @@ class StrengthPoint:
 
     category: str
     description: str
-    evidence: List[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
 
 
 @dataclass
 class AnalysisResult:
     """Result of weakness analysis."""
 
-    weaknesses: List[WeaknessPoint]
-    strengths: List[StrengthPoint]
-    phrase_patterns: List[PhrasePattern]
-    vocabulary_analysis: Dict[str, Any]
-    improvement_suggestions: List[str]
+    weaknesses: list[WeaknessPoint]
+    strengths: list[StrengthPoint]
+    phrase_patterns: list[PhrasePattern]
+    vocabulary_analysis: dict[str, Any]
+    improvement_suggestions: list[str]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "weaknesses": [
@@ -164,7 +162,7 @@ class WeaknessAnalyzer:
             self.logger.error(f"Error during analysis: {e}", e)
             raise
 
-    async def _analyze_phrase_patterns(self, stats: SessionStatistics) -> List[PhrasePattern]:
+    async def _analyze_phrase_patterns(self, stats: SessionStatistics) -> list[PhrasePattern]:
         """
         Analyze repeated phrase patterns in speeches.
 
@@ -207,7 +205,7 @@ class WeaknessAnalyzer:
 
         return patterns
 
-    async def _analyze_vocabulary(self, stats: SessionStatistics) -> Dict[str, Any]:
+    async def _analyze_vocabulary(self, stats: SessionStatistics) -> dict[str, Any]:
         """
         Analyze vocabulary usage patterns.
 
@@ -261,9 +259,9 @@ class WeaknessAnalyzer:
     async def _identify_weaknesses(
         self,
         stats: SessionStatistics,
-        vocab_analysis: Dict[str, Any],
-        phrase_patterns: List[PhrasePattern]
-    ) -> List[WeaknessPoint]:
+        vocab_analysis: dict[str, Any],
+        phrase_patterns: list[PhrasePattern]
+    ) -> list[WeaknessPoint]:
         """
         Identify specific weakness areas.
 
@@ -370,8 +368,8 @@ class WeaknessAnalyzer:
     async def _identify_strengths(
         self,
         stats: SessionStatistics,
-        vocab_analysis: Dict[str, Any]
-    ) -> List[StrengthPoint]:
+        vocab_analysis: dict[str, Any]
+    ) -> list[StrengthPoint]:
         """
         Identify strength areas.
 
@@ -436,9 +434,9 @@ class WeaknessAnalyzer:
 
     async def _generate_suggestions(
         self,
-        weaknesses: List[WeaknessPoint],
-        vocab_analysis: Dict[str, Any]
-    ) -> List[str]:
+        weaknesses: list[WeaknessPoint],
+        vocab_analysis: dict[str, Any]
+    ) -> list[str]:
         """
         Generate actionable improvement suggestions.
 

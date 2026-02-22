@@ -1,9 +1,8 @@
 """OCR detector for extracting numerical values from HUD."""
 
+
 import cv2
 import numpy as np
-import re
-from typing import Dict, List, Optional, Tuple
 
 
 class OCRDetector:
@@ -37,7 +36,7 @@ class OCRDetector:
         self,
         frame: np.ndarray,
         min_confidence: float = 0.7
-    ) -> Dict:
+    ) -> dict:
         """
         Extract number from frame region.
 
@@ -60,7 +59,7 @@ class OCRDetector:
         self,
         frame: np.ndarray,
         min_confidence: float
-    ) -> Dict:
+    ) -> dict:
         """
         Extract number using template matching (MVP).
 
@@ -148,7 +147,7 @@ class OCRDetector:
         self,
         frame: np.ndarray,
         min_confidence: float
-    ) -> Dict:
+    ) -> dict:
         """
         Extract number using Tesseract (Phase 2+).
 
@@ -170,7 +169,7 @@ class OCRDetector:
             "source": "ocr_tesseract",
         }
 
-    def extract_hp(self, frame: np.ndarray) -> Dict:
+    def extract_hp(self, frame: np.ndarray) -> dict:
         """
         Extract HP value from frame.
 
@@ -184,7 +183,7 @@ class OCRDetector:
         result["value"] = min(100, max(0, result["value"]))  # Clamp to 0-100
         return result
 
-    def extract_shield(self, frame: np.ndarray) -> Dict:
+    def extract_shield(self, frame: np.ndarray) -> dict:
         """
         Extract Shield value from frame.
 
@@ -198,7 +197,7 @@ class OCRDetector:
         result["value"] = min(100, max(0, result["value"]))  # Clamp to 0-100
         return result
 
-    def extract_ammo(self, frame: np.ndarray) -> Dict:
+    def extract_ammo(self, frame: np.ndarray) -> dict:
         """
         Extract ammo count from frame.
 

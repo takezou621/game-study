@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # pip dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    rebase-strategy: "auto"
+    ignore:
+      # Ignore major version updates for stability
+      - dependency-name: "opencv-python"
+        update-types: ["version-update:major"]
+      - dependency-name: "ultralytics"
+        update-types: ["version-update:major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    rebase-strategy: "auto"

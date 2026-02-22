@@ -1,7 +1,9 @@
 """Tests for TriggerEngine."""
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from trigger.engine import TriggerEngine
 from trigger.rules import TriggerCondition, TriggerRule
 
@@ -14,7 +16,7 @@ class TestTriggerEngine:
         engine = TriggerEngine(sample_triggers_config_path)
 
         assert engine.config is not None
-        assert len(engine.rules) == 3
+        assert len(engine.rules) == 5  # 5 rules in sample_triggers_config_path
         assert engine.cooldown_enabled is True
         assert engine.interrupt_higher_priority is True
         assert engine.max_response_length == 200
@@ -202,7 +204,7 @@ class TestTriggerEngine:
         engine = TriggerEngine(sample_triggers_config_path)
 
         rules = engine.get_all_rules()
-        assert len(rules) == 3
+        assert len(rules) == 5  # 5 rules in sample_triggers_config_path
         assert all(isinstance(rule, dict) for rule in rules)
         assert "id" in rules[0]
         assert "name" in rules[0]
@@ -320,10 +322,11 @@ class TestTriggerCondition:
         assert condition.evaluate(state) is False
 
     def test_evaluate_invalid_operator(self):
-        """Test evaluation with invalid operator."""
-        condition = TriggerCondition("player.status.hp", "invalid", 30)
-        state = {"player": {"status": {"hp": 25}}}
-        assert condition.evaluate(state) is False
+        """Test evaluation with invalid operator - Pydantic validates at construction."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            TriggerCondition("player.status.hp", "invalid", 30)
 
     def test_to_dict(self):
         """Test converting condition to dictionary."""

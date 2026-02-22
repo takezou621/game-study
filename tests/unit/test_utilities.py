@@ -1,11 +1,6 @@
 """Tests for utility modules (WebRTC, Rate Limiter, Constants)."""
 
-import asyncio
-import tempfile
-import os
-from unittest.mock import MagicMock, Mock, patch, AsyncMock
 
-import pytest
 
 
 # ============================================================================
@@ -110,8 +105,8 @@ class TestConstants:
         """Test that constants can be imported."""
         from utils.constants import (
             DEFAULT_COOLDOWN_MS,
+            MAX_RESPONSE_LENGTH_CHARS,
             MAX_RESPONSE_LENGTH_MS,
-            MAX_RESPONSE_LENGTH_CHARS
         )
         assert DEFAULT_COOLDOWN_MS > 0
         assert MAX_RESPONSE_LENGTH_MS > 0
@@ -120,10 +115,10 @@ class TestConstants:
     def test_priority_constants(self):
         """Test priority constants."""
         from utils.constants import (
+            PRIORITY_CHATTER,
+            PRIORITY_LEARNING,
             PRIORITY_SURVIVAL,
             PRIORITY_TACTICAL,
-            PRIORITY_LEARNING,
-            PRIORITY_CHATTER
         )
         assert PRIORITY_SURVIVAL == 0
         assert PRIORITY_TACTICAL == 1
@@ -132,10 +127,7 @@ class TestConstants:
 
     def test_hp_shield_constants(self):
         """Test HP and shield constants."""
-        from utils.constants import (
-            HP_MIN, HP_MAX,
-            SHIELD_MIN, SHIELD_MAX
-        )
+        from utils.constants import HP_MAX, HP_MIN, SHIELD_MAX, SHIELD_MIN
         assert HP_MIN == 0
         assert HP_MAX == 100
         assert SHIELD_MIN == 0
@@ -144,9 +136,9 @@ class TestConstants:
     def test_realtime_constants(self):
         """Test realtime API constants."""
         from utils.constants import (
-            REALTIME_VAD_THRESHOLD,
+            REALTIME_PREFIX_PADDING_MS,
             REALTIME_SILENCE_DURATION_MS,
-            REALTIME_PREFIX_PADDING_MS
+            REALTIME_VAD_THRESHOLD,
         )
         assert 0 <= REALTIME_VAD_THRESHOLD <= 1
         assert REALTIME_SILENCE_DURATION_MS > 0
@@ -169,8 +161,9 @@ class TestTimeUtils:
 
     def test_timestamp_increases(self):
         """Test that timestamp increases."""
-        from utils.time import get_timestamp_ms
         import time
+
+        from utils.time import get_timestamp_ms
         ts1 = get_timestamp_ms()
         time.sleep(0.01)
         ts2 = get_timestamp_ms()

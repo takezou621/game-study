@@ -1,14 +1,15 @@
 """Integration tests for game-study."""
 
 import json
-import pytest
 import tempfile
-import shutil
 from pathlib import Path
-from trigger.engine import TriggerEngine
-from vision.state_builder import StateBuilder
+
+import pytest
+
 from dialogue.templates import DialogueTemplateManager
+from trigger.engine import TriggerEngine
 from utils.logger import SessionLogger
+from vision.state_builder import StateBuilder
 
 
 @pytest.mark.integration
@@ -77,7 +78,7 @@ class TestIntegration:
 
         # Verify logged
         assert logger.state_log_path.exists()
-        with open(logger.state_log_path, "r") as f:
+        with open(logger.state_log_path) as f:
             logged_state = json.loads(f.read().strip())
 
         assert logged_state["player"]["status"]["hp"]["value"] == 75
@@ -227,7 +228,6 @@ class TestIntegration:
         """Test that lower priority triggers are suppressed during combat."""
         # Create custom config with P2 rule
         import yaml
-        import tempfile
 
         config_data = {
             "triggers": [
@@ -237,7 +237,7 @@ class TestIntegration:
                     "priority": 0,
                     "enabled": True,
                     "conditions": [{"field": "player.status.hp", "operator": "lt", "value": 20}],
-                    "template": {"combat": "Critical!", "non_combat": "Critical low HP"},
+                    "templates": {"combat": "Critical!", "non_combat": "Critical low HP"},
                     "cooldown_ms": 0,
                 },
                 {
@@ -246,7 +246,7 @@ class TestIntegration:
                     "priority": 2,
                     "enabled": True,
                     "conditions": [{"field": "session.inactivity_duration_ms", "operator": "gt", "value": 1000}],
-                    "template": {"combat": None, "non_combat": "Chat message"},
+                    "templates": {"combat": None, "non_combat": "Chat message"},
                     "cooldown_ms": 0,
                 },
             ],
@@ -357,7 +357,7 @@ class TestIntegration:
 
         # Verify error was logged
         assert logger.error_log_path.exists()
-        with open(logger.error_log_path, "r") as f:
+        with open(logger.error_log_path) as f:
             content = f.read()
             assert "Integration test error" in content
             assert "ValueError" in content
@@ -374,7 +374,7 @@ class TestIntegration:
                     "priority": 0,
                     "enabled": True,
                     "conditions": [{"field": "player.status.hp", "operator": "lt", "value": 50}],
-                    "template": {"combat": "A", "non_combat": "A"},
+                    "templates": {"combat": "A", "non_combat": "A"},
                     "cooldown_ms": 0,
                 },
                 {
@@ -383,7 +383,7 @@ class TestIntegration:
                     "priority": 0,
                     "enabled": True,
                     "conditions": [{"field": "player.status.shield", "operator": "eq", "value": 0}],
-                    "template": {"combat": "B", "non_combat": "B"},
+                    "templates": {"combat": "B", "non_combat": "B"},
                     "cooldown_ms": 0,
                 },
             ],

@@ -1,12 +1,10 @@
 """Session statistics collection and storage for review functionality."""
 
 import json
-import logging
-from collections import defaultdict
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -20,11 +18,11 @@ class SpeechMetrics:
     timestamp_ms: int
     trigger_name: str
     response_text: str
-    voice_duration_ms: Optional[int] = None
+    voice_duration_ms: int | None = None
     movement_state: str = "non_combat"
     priority: int = 0
     word_count: int = 0
-    unique_words: List[str] = field(default_factory=list)
+    unique_words: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         """Calculate word count and unique words after initialization."""
@@ -40,7 +38,7 @@ class SessionStatistics:
 
     session_dir: str
     start_time: str = field(default_factory=lambda: datetime.now().isoformat())
-    end_time: Optional[str] = None
+    end_time: str | None = None
 
     # Speech metrics
     total_speeches: int = 0
@@ -49,9 +47,9 @@ class SessionStatistics:
 
     # Response time metrics (milliseconds)
     avg_response_time_ms: float = 0.0
-    min_response_time_ms: Optional[int] = None
-    max_response_time_ms: Optional[int] = None
-    response_times: List[int] = field(default_factory=list)
+    min_response_time_ms: int | None = None
+    max_response_time_ms: int | None = None
+    response_times: list[int] = field(default_factory=list)
 
     # Voice metrics
     total_voice_duration_ms: int = 0
@@ -60,10 +58,10 @@ class SessionStatistics:
     # Vocabulary metrics
     total_word_count: int = 0
     unique_vocabulary: set = field(default_factory=set)
-    vocabulary_frequency: Dict[str, int] = field(default_factory=dict)
+    vocabulary_frequency: dict[str, int] = field(default_factory=dict)
 
     # Trigger distribution
-    trigger_counts: Dict[str, int] = field(default_factory=dict)
+    trigger_counts: dict[str, int] = field(default_factory=dict)
 
     # Priority distribution
     high_priority_count: int = 0
@@ -71,9 +69,9 @@ class SessionStatistics:
     low_priority_count: int = 0
 
     # Individual speech events for detailed analysis
-    speeches: List[Dict[str, Any]] = field(default_factory=list)
+    speeches: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "session_dir": self.session_dir,
@@ -97,7 +95,7 @@ class SessionStatistics:
             "speeches": self.speeches,
         }
 
-    def merge_vocabulary(self, words: List[str]) -> None:
+    def merge_vocabulary(self, words: list[str]) -> None:
         """Merge new words into vocabulary statistics."""
         for word in words:
             self.unique_vocabulary.add(word)
@@ -154,7 +152,7 @@ class SessionStatsCollector:
             return
 
         try:
-            with open(response_log_path, 'r') as f:
+            with open(response_log_path) as f:
                 for line in f:
                     if not line.strip():
                         continue
@@ -165,10 +163,10 @@ class SessionStatsCollector:
                     except json.JSONDecodeError as e:
                         self.logger.error(f"Error parsing response log line: {e}")
 
-        except IOError as e:
+        except OSError as e:
             self.logger.error(f"Error reading response log: {e}", e)
 
-    async def _process_response_entry(self, entry: Dict[str, Any]) -> None:
+    async def _process_response_entry(self, entry: dict[str, Any]) -> None:
         """Process a single response entry."""
         timestamp_ms = entry.get("timestamp_ms", 0)
         trigger_name = entry.get("trigger_name", "unknown")
@@ -233,7 +231,7 @@ class SessionStatsCollector:
             return
 
         try:
-            with open(trigger_log_path, 'r') as f:
+            with open(trigger_log_path) as f:
                 for line in f:
                     if not line.strip():
                         continue
@@ -245,7 +243,7 @@ class SessionStatsCollector:
                     except json.JSONDecodeError:
                         pass
 
-        except IOError as e:
+        except OSError as e:
             self.logger.error(f"Error reading trigger log: {e}", e)
 
     def _calculate_derived_stats(self) -> None:
@@ -276,7 +274,7 @@ class SessionStatsCollector:
             self.stats.min_response_time_ms = min(response_times)
             self.stats.max_response_time_ms = max(response_times)
 
-    async def save(self, output_path: Optional[str] = None) -> str:
+    async def save(self, output_path: str | None = None) -> str:
         """
         Save statistics to JSON file.
 
@@ -298,7 +296,7 @@ class SessionStatsCollector:
             self.logger.info(f"Statistics saved to: {output_path}")
             return str(output_path)
 
-        except IOError as e:
+        except OSError as e:
             self.logger.error(f"Error saving statistics: {e}", e)
             raise
 
@@ -314,7 +312,7 @@ async def load_statistics(stats_path: str) -> SessionStatistics:
         Loaded SessionStatistics object
     """
     try:
-        with open(stats_path, 'r') as f:
+        with open(stats_path) as f:
             data = json.load(f)
 
         # Reconstruct SessionStatistics from dict
@@ -344,6 +342,6 @@ async def load_statistics(stats_path: str) -> SessionStatistics:
 
         return stats
 
-    except (IOError, json.JSONDecodeError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.error(f"Error loading statistics from {stats_path}: {e}")
         raise

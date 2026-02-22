@@ -1,0 +1,68 @@
+# Development Dockerfile with hot reload support
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies and system libraries required by OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    vim \
+    curl \
+    libgtk-3-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libatlas-base-dev \
+    python3-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install development tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Copy requirements files
+COPY requirements.txt requirements-minimal.txt requirements-webrtc.txt requirements-dev.txt ./
+
+# Install all dependencies including dev dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+# Install additional development tools for hot reload
+RUN pip install --no-cache-dir watchdog pytest-watch
+
+# Create non-root user (but keep root available for some dev operations)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Create directories for output and logs
+RUN mkdir -p /app/output /app/logs && \
+    chown -R appuser:appuser /app/output /app/logs
+
+# Set up environment
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV ENV=development
+
+# Volume mount point for hot reload
+VOLUME ["/app"]
+
+# Default to development-friendly settings
+USER appuser
+
+# Entry point for development (can be overridden)
+ENTRYPOINT ["python", "-m", "src.main"]
+CMD ["--help"]

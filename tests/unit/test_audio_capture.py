@@ -1,8 +1,7 @@
 """Tests for audio capture module."""
 
-import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
@@ -15,8 +14,6 @@ from audio.capture import (
     SpeechSegment,
     create_audio_capture,
 )
-from audio.vad import VADResult
-
 
 # ============================================================================
 # AudioConfig Tests

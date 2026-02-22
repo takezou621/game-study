@@ -1,6 +1,5 @@
 """WebRTC utilities for State and ROI streaming."""
 
-import asyncio
 import hashlib
 import hmac
 import json
@@ -8,7 +7,8 @@ import logging
 import os
 import secrets
 import time
-from typing import Optional, Dict, Any
+from typing import Any
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class WebRTCStreamer:
 
     def __init__(
         self,
-        stun_servers: Optional[list] = None,
+        stun_servers: list | None = None,
         port_range: tuple = (10000, 20000)
     ):
         """
@@ -174,7 +174,7 @@ class WebRTCStreamer:
         except json.JSONDecodeError:
             logger.warning(f"Invalid JSON received: {message}")
 
-    async def send_state(self, state: Dict[str, Any]) -> bool:
+    async def send_state(self, state: dict[str, Any]) -> bool:
         """
         Send State JSON through data channel.
 
@@ -246,7 +246,7 @@ class WebRTCStreamer:
             logger.error(f"Failed to send video frame: {e}")
             return False
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """
         Get streaming statistics.
 
@@ -310,7 +310,7 @@ class WebRTCSignalingServer:
         self,
         host: str = "0.0.0.0",
         port: int = WEBRTC_DEFAULT_PORT,
-        secret_key: Optional[str] = None
+        secret_key: str | None = None
     ):
         """
         Initialize signaling server.
@@ -360,7 +360,7 @@ class WebRTCSignalingServer:
 
         return f"{payload}:{signature}"
 
-    def verify_token(self, token: str) -> tuple[bool, Optional[str]]:
+    def verify_token(self, token: str) -> tuple[bool, str | None]:
         """
         Verify an authentication token.
 
@@ -398,7 +398,7 @@ class WebRTCSignalingServer:
 
             return True, client_id
 
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             logger.error("Token verification failed", exc_info=True)
             return False, "Invalid token format"
 

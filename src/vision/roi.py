@@ -1,7 +1,7 @@
 """ROI (Region of Interest) extraction."""
 
+
 import numpy as np
-from typing import Dict, List, Tuple, Optional
 import yaml
 
 
@@ -15,13 +15,13 @@ class ROIExtractor:
         Args:
             roi_config_path: Path to ROI configuration YAML file
         """
-        with open(roi_config_path, 'r') as f:
+        with open(roi_config_path) as f:
             self.config = yaml.safe_load(f)
 
         self.rois = self.config.get('rois', {})
         self.calibration = self.config.get('calibration', {})
 
-    def get_roi_by_name(self, name: str) -> Optional[Dict]:
+    def get_roi_by_name(self, name: str) -> dict | None:
         """
         Get ROI configuration by name.
 
@@ -35,10 +35,10 @@ class ROIExtractor:
 
     def normalized_to_pixel(
         self,
-        bbox: List[float],
+        bbox: list[float],
         width: int,
         height: int
-    ) -> Tuple[int, int, int, int]:
+    ) -> tuple[int, int, int, int]:
         """
         Convert normalized bbox to pixel coordinates.
 
@@ -60,7 +60,7 @@ class ROIExtractor:
         self,
         frame: np.ndarray,
         roi_name: str
-    ) -> Optional[np.ndarray]:
+    ) -> np.ndarray | None:
         """
         Extract ROI region from frame.
 
@@ -84,7 +84,7 @@ class ROIExtractor:
     def extract_all_rois(
         self,
         frame: np.ndarray
-    ) -> Dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:
         """
         Extract all defined ROIs from frame.
 
@@ -107,7 +107,7 @@ class ROIExtractor:
         field_name: str,
         width: int,
         height: int
-    ) -> Optional[Tuple[int, int, int, int]]:
+    ) -> tuple[int, int, int, int] | None:
         """
         Get pixel coordinates for a specific field within an ROI.
 

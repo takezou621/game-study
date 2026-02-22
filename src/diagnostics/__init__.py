@@ -34,42 +34,40 @@ Example usage:
 """
 
 from .audio_check import (
+    AudioDiagnostics,
+    AudioDiagnosticsError,
     AudioIssue,
     AudioIssueType,
     AudioMetrics,
-    AudioDiagnostics,
-    AudioDiagnosticsError,
-    EchoDetector,
-    CrosstalkDetector,
     AudioQualityAnalyzer,
+    CrosstalkDetector,
+    EchoDetector,
     create_audio_diagnostics,
 )
-
+from .report import (
+    ConsoleReporter,
+    DiagnosticIssue,
+    DiagnosticReport,
+    FixSuggestion,
+    IssueClassifier,
+    ReportGenerator,
+    SeverityLevel,
+    generate_diagnostic_report,
+    print_report_to_console,
+)
 from .system_check import (
-    CheckStatus,
-    CheckResult,
-    SystemComponent,
-    SystemInfo,
-    DeviceInfo,
     AudioDeviceChecker,
+    CheckResult,
+    CheckStatus,
+    DeviceInfo,
     NetworkChecker,
     PerformanceChecker,
     PermissionChecker,
+    SystemComponent,
     SystemDiagnostics,
     SystemDiagnosticsError,
+    SystemInfo,
     create_system_diagnostics,
-)
-
-from .report import (
-    SeverityLevel,
-    FixSuggestion,
-    DiagnosticIssue,
-    DiagnosticReport,
-    IssueClassifier,
-    ReportGenerator,
-    ConsoleReporter,
-    generate_diagnostic_report,
-    print_report_to_console,
 )
 
 __all__ = [

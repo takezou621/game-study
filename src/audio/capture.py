@@ -8,13 +8,14 @@ import asyncio
 import queue
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from audio.vad import VADResult, VoiceActivityDetector
+from audio.vad import VoiceActivityDetector
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +37,7 @@ class AudioConfig:
     channels: int = 1  # Mono
     chunk_size: int = 512  # Frames per chunk
     format: str = "int16"  # Audio format
-    device_index: Optional[int] = None  # None for default device
+    device_index: int | None = None  # None for default device
     noise_gate_threshold: float = 0.01  # Noise gate (0-1)
     noise_gate_attack_ms: float = 5.0  # Attack time in ms
     noise_gate_release_ms: float = 50.0  # Release time in ms
@@ -105,9 +106,9 @@ class AudioCapture:
 
     def __init__(
         self,
-        config: Optional[AudioConfig] = None,
-        on_frame_callback: Optional[Callable[[AudioFrame], None]] = None,
-        on_speech_callback: Optional[Callable[[SpeechSegment], None]] = None
+        config: AudioConfig | None = None,
+        on_frame_callback: Callable[[AudioFrame], None] | None = None,
+        on_speech_callback: Callable[[SpeechSegment], None] | None = None
     ):
         """
         Initialize audio capture.
@@ -123,21 +124,21 @@ class AudioCapture:
 
         # State
         self.state = CaptureState.STOPPED
-        self._capture_thread: Optional[threading.Thread] = None
+        self._capture_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
         # Audio libraries
-        self._sd: Optional[Any] = None
-        self._pyaudio: Optional[Any] = None
-        self._stream: Optional[Any] = None
+        self._sd: Any | None = None
+        self._pyaudio: Any | None = None
+        self._stream: Any | None = None
 
         # VAD
-        self._vad: Optional[VoiceActivityDetector] = None
+        self._vad: VoiceActivityDetector | None = None
         self._vad_enabled = self.config.vad_enabled
 
         # Speech detection buffers
-        self._speech_buffer: List[np.ndarray] = []
-        self._speech_start_time: Optional[float] = None
+        self._speech_buffer: list[np.ndarray] = []
+        self._speech_start_time: float | None = None
         self._silence_frames = 0
         self._speech_frames = 0
         self._in_speech = False
@@ -247,7 +248,7 @@ class AudioCapture:
         self.state = CaptureState.STOPPED
         logger.info("Audio capture stopped")
 
-    def read_frame(self, timeout: float = 0.1) -> Optional[AudioFrame]:
+    def read_frame(self, timeout: float = 0.1) -> AudioFrame | None:
         """
         Read a single audio frame (blocking).
 
@@ -262,7 +263,7 @@ class AudioCapture:
         except queue.Empty:
             return None
 
-    def read_speech_segment(self, timeout: float = 1.0) -> Optional[SpeechSegment]:
+    def read_speech_segment(self, timeout: float = 1.0) -> SpeechSegment | None:
         """
         Read a detected speech segment (blocking).
 
@@ -277,18 +278,18 @@ class AudioCapture:
         except queue.Empty:
             return None
 
-    async def read_frame_async(self) -> Optional[AudioFrame]:
+    async def read_frame_async(self) -> AudioFrame | None:
         """Async version of read_frame."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.read_frame)
 
-    async def read_speech_segment_async(self) -> Optional[SpeechSegment]:
+    async def read_speech_segment_async(self) -> SpeechSegment | None:
         """Async version of read_speech_segment."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.read_speech_segment)
 
     @staticmethod
-    def list_devices() -> List[Dict[str, Any]]:
+    def list_devices() -> list[dict[str, Any]]:
         """
         List available audio input devices.
 
@@ -331,7 +332,7 @@ class AudioCapture:
 
         return devices
 
-    def _try_import_sounddevice(self) -> Optional[Any]:
+    def _try_import_sounddevice(self) -> Any | None:
         """Try to import sounddevice."""
         try:
             import sounddevice as sd
@@ -339,7 +340,7 @@ class AudioCapture:
         except ImportError:
             return None
 
-    def _try_import_pyaudio(self) -> Optional[Any]:
+    def _try_import_pyaudio(self) -> Any | None:
         """Try to import pyaudio."""
         try:
             import pyaudio
@@ -588,7 +589,7 @@ class AudioCapture:
 
 def create_audio_capture(
     sample_rate: int = 16000,
-    device_index: Optional[int] = None,
+    device_index: int | None = None,
     noise_gate_threshold: float = 0.01,
     vad_enabled: bool = True
 ) -> AudioCapture:
