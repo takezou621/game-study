@@ -15,16 +15,16 @@ def check_health() -> dict[str, Any]:
 
     Performs health checks on various application components:
     - Configuration loading
-    - API key availability
+    - API key availability (optional - app works in template-only mode)
     - Directory writability
 
     Returns:
         Dict with health status of each component:
         - config: Can load configuration (bool)
-        - api_key: API key is set (bool)
+        - api_key: API key is set (bool) - optional, not required for health
         - directories: Required directories are writable (bool)
         - details: Additional information about each check
-        - healthy: Overall health status (bool)
+        - healthy: Overall health status (config + directories, API key optional)
     """
     results: dict[str, Any] = {
         "config": False,
@@ -50,9 +50,9 @@ def check_health() -> dict[str, Any]:
     results["details"]["directories"] = directories_details
 
     # Overall health
+    # API key is optional - app works in template-only mode without it
     results["healthy"] = all([
         results["config"],
-        results["api_key"],
         results["directories"],
     ])
 
@@ -123,11 +123,10 @@ def _check_directories() -> tuple[bool, dict[str, Any]]:
     """
     details: dict[str, Any] = {"checks": [], "directories": {}}
 
-    # Directories to check
+    # Directories to check (matching Docker container layout)
     required_dirs: list[str] = [
         "logs",
-        "models",
-        "audio_output",
+        "output",
     ]
 
     all_healthy = True

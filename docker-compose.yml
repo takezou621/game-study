@@ -11,13 +11,16 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ENV=production
-      # Add OpenAI API key if needed
+      # Add OpenAI API key if needed (optional - app works in template-only mode)
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       # Mount config files and output directory
       - ./configs:/app/configs:ro
       - ./output:/app/output
       - ./logs:/app/logs
+    # Keep container running for production use
+    # Override with: docker compose run --rm app --input video --video /path/to/video.mp4 --out /app/output
+    command: ["tail", "-f", "/dev/null"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
