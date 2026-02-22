@@ -1,8 +1,10 @@
 """Base class for video capture sources."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import Any, Self
+from typing import Any
 
 import numpy as np
 

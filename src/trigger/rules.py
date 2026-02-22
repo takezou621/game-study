@@ -190,7 +190,7 @@ class TriggerCondition:
         elif self.operator == "in":
             return current in self.value if isinstance(self.value, (list, tuple)) else False
         elif self.operator == "not_in":
-            return current not in self.value if isinstance(self.value, (list, tuple)) else True
+            return current not in self.value if isinstance(self.value, (list, tuple)) else False
         elif self.operator == "contains":
             return self.value in current if isinstance(current, (str, list, tuple)) else False
         else:
