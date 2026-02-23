@@ -4,11 +4,10 @@ import logging
 import os
 from typing import Any
 
-try:
+from utils.dependencies import OPENAI_AVAILABLE
+
+if OPENAI_AVAILABLE:
     from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class OpenAIClient:
         self,
         api_key: str | None = None,
         model: str = "gpt-4",
-        system_prompt_path: str | None = None
+        system_prompt_path: str | None = None,
     ):
         """
         Initialize OpenAI client.
@@ -51,12 +50,10 @@ class OpenAIClient:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
 
         if not resolved_api_key:
-            raise ValueError(
-                "OpenAI API key is required. Set OPENAI_API_KEY environment variable."
-            )
+            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
 
         # Validate API key format (OpenAI keys start with 'sk-')
-        if resolved_api_key and not resolved_api_key.startswith('sk-'):
+        if resolved_api_key and not resolved_api_key.startswith("sk-"):
             logger.warning("API key format appears invalid (should start with 'sk-')")
 
         self.client = OpenAI(api_key=resolved_api_key)
@@ -104,7 +101,7 @@ class OpenAIClient:
         trigger_info: dict[str, Any],
         state: dict[str, Any],
         movement_state: str,
-        max_length: int = MAX_RESPONSE_CHARS
+        max_length: int = MAX_RESPONSE_CHARS,
     ) -> str:
         """
         Generate AI response based on trigger and state.
@@ -119,7 +116,7 @@ class OpenAIClient:
             Generated response string
         """
         # Use template if available (MVP behavior)
-        template = trigger_info.get('template')
+        template = trigger_info.get("template")
         if template:
             # For MVP, use template directly
             # In Phase 2+, we can enhance with OpenAI
@@ -129,11 +126,7 @@ class OpenAIClient:
         return self._generate_with_openai(trigger_info, state, movement_state, max_length)
 
     def _enhance_template(
-        self,
-        template: str,
-        state: dict[str, Any],
-        movement_state: str,
-        max_length: int
+        self, template: str, state: dict[str, Any], movement_state: str, max_length: int
     ) -> str:
         """
         Enhance template with state information.
@@ -156,7 +149,7 @@ class OpenAIClient:
         trigger_info: dict[str, Any],
         state: dict[str, Any],
         movement_state: str,
-        max_length: int
+        max_length: int,
     ) -> str:
         """
         Generate response using OpenAI API.
@@ -194,7 +187,7 @@ class OpenAIClient:
 
             # Truncate to max length
             if len(response_text) > max_length:
-                response_text = response_text[:max_length].rsplit(' ', 1)[0] + '...'
+                response_text = response_text[:max_length].rsplit(" ", 1)[0] + "..."
 
             return response_text
 
@@ -204,10 +197,7 @@ class OpenAIClient:
             return "Response generation failed. Please try again."
 
     def _build_context(
-        self,
-        trigger_info: dict[str, Any],
-        state: dict[str, Any],
-        movement_state: str
+        self, trigger_info: dict[str, Any], state: dict[str, Any], movement_state: str
     ) -> str:
         """
         Build context string for OpenAI.

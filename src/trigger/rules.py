@@ -3,31 +3,12 @@
 from enum import Enum
 from typing import Any
 
-try:
-    from pydantic import BaseModel, Field, field_validator
-    PYDANTIC_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AVAILABLE = False
-    # Create a minimal BaseModel fallback if pydantic is not available
-    class BaseModel:
-        """Fallback BaseModel for when pydantic is not available."""
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-        def model_dump(self):
-            return self.__dict__
-
-        @classmethod
-        def model_validate(cls, data):
-            return cls(**data)
-
-    def Field(default=None, **kwargs):
-        return default
+from utils.dependencies import PYDANTIC_AVAILABLE, BaseModel, Field, field_validator
 
 
 class OperatorType(str, Enum):
     """Valid comparison operators for trigger conditions."""
+
     EQ = "eq"
     LT = "lt"
     GT = "gt"
@@ -40,6 +21,7 @@ class OperatorType(str, Enum):
 
 
 if PYDANTIC_AVAILABLE:
+
     class TriggerConditionModel(BaseModel):
         """Pydantic model for trigger condition validation."""
 
@@ -47,17 +29,17 @@ if PYDANTIC_AVAILABLE:
         operator: OperatorType = Field(..., description="Comparison operator")
         value: Any = Field(..., description="Value to compare against")
 
-        @field_validator('field')
+        @field_validator("field")
         @classmethod
         def validate_field(cls, v: str) -> str:
             """Validate field path format."""
             if not v or not isinstance(v, str):
                 raise ValueError("Field must be a non-empty string")
-            if '.' not in v:
+            if "." not in v:
                 raise ValueError("Field must be a dot-separated path (e.g., 'player.status.hp')")
             return v
 
-        @field_validator('operator')
+        @field_validator("operator")
         @classmethod
         def validate_operator(cls, v: str) -> str:
             """Validate operator is supported."""
@@ -69,7 +51,6 @@ if PYDANTIC_AVAILABLE:
         class Config:
             use_enum_values = True
 
-
     class TriggerRuleModel(BaseModel):
         """Pydantic model for trigger rule validation."""
 
@@ -78,30 +59,29 @@ if PYDANTIC_AVAILABLE:
         priority: int = Field(..., ge=0, le=3, description="Priority level (0=highest, 3=lowest)")
         enabled: bool = Field(default=True, description="Whether the rule is enabled")
         conditions: list[TriggerConditionModel] = Field(
-            default_factory=list,
-            description="List of conditions that must all be true"
+            default_factory=list, description="List of conditions that must all be true"
         )
         templates: dict[str, str | None] = Field(
-            default_factory=dict,
-            description="Response templates for different movement states"
+            default_factory=dict, description="Response templates for different movement states"
         )
         cooldown_ms: int = Field(default=0, ge=0, description="Cooldown period in milliseconds")
         interrupt_higher_priority: bool = Field(
-            default=False,
-            description="Whether to interrupt higher priority triggers"
+            default=False, description="Whether to interrupt higher priority triggers"
         )
 
-        @field_validator('templates')
+        @field_validator("templates")
         @classmethod
         def validate_templates(cls, v):
             """Validate templates contain valid states."""
-            valid_states = {'combat', 'non_combat', 'default'}
+            valid_states = {"combat", "non_combat", "default"}
             for key in v:
                 if key not in valid_states:
-                    raise ValueError(f"Invalid template state: {key}. Must be one of {valid_states}")
+                    raise ValueError(
+                        f"Invalid template state: {key}. Must be one of {valid_states}"
+                    )
             return v
 
-        @field_validator('rule_id')
+        @field_validator("rule_id")
         @classmethod
         def validate_rule_id(cls, v):
             """Validate rule ID format."""
@@ -130,11 +110,7 @@ class TriggerCondition:
         """
         # Validate using Pydantic model if available
         if PYDANTIC_AVAILABLE:
-            validated = TriggerConditionModel(
-                field=field,
-                operator=operator,
-                value=value
-            )
+            validated = TriggerConditionModel(field=field, operator=operator, value=value)
             self.field = validated.field
             self.operator = validated.operator
             self.value = validated.value
@@ -155,7 +131,7 @@ class TriggerCondition:
             True if condition is met, False otherwise
         """
         # Navigate to the field value
-        keys = self.field.split('.')
+        keys = self.field.split(".")
         current = state
 
         try:
@@ -247,7 +223,7 @@ class TriggerRule:
                 conditions=conditions_data,
                 templates=templates,
                 cooldown_ms=cooldown_ms,
-                interrupt_higher_priority=interrupt_higher_priority
+                interrupt_higher_priority=interrupt_higher_priority,
             )
             self.id = validated.rule_id
             self.name = validated.name
@@ -258,7 +234,7 @@ class TriggerRule:
             self.interrupt_higher_priority = validated.interrupt_higher_priority
             # Recreate conditions from validated data
             self.conditions = [
-                TriggerCondition(**c.model_dump() if hasattr(c, 'model_dump') else c)
+                TriggerCondition(**c.model_dump() if hasattr(c, "model_dump") else c)
                 for c in validated.conditions
             ]
         else:

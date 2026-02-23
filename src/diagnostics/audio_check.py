@@ -10,18 +10,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
+from utils.dependencies import NUMPY_AVAILABLE, SCIPY_AVAILABLE
 
-try:
-    from scipy import signal
+if NUMPY_AVAILABLE:
+    import numpy as np
+
+if SCIPY_AVAILABLE:
     from scipy.fft import fft, fftfreq
-    SCIPY_AVAILABLE = True
-except ImportError:
-    SCIPY_AVAILABLE = False
 
 from utils.exceptions import GameStudyError
 from utils.logger import get_logger
@@ -31,6 +26,7 @@ logger = get_logger(__name__)
 
 class AudioIssueType(Enum):
     """Types of audio issues that can be detected."""
+
     ECHO = "echo"
     CROSSTALK = "crosstalk"
     LOW_SNR = "low_snr"
@@ -42,6 +38,7 @@ class AudioIssueType(Enum):
 @dataclass
 class AudioIssue:
     """Represents a detected audio issue."""
+
     issue_type: AudioIssueType
     severity: str  # "info", "warning", "error"
     message: str
@@ -55,13 +52,14 @@ class AudioIssue:
             "severity": self.severity,
             "message": self.message,
             "timestamp": self.timestamp,
-            "details": self.details
+            "details": self.details,
         }
 
 
 @dataclass
 class AudioMetrics:
     """Audio quality metrics."""
+
     snr_db: float | None = None
     latency_ms: float | None = None
     bitrate_kbps: float | None = None
@@ -84,7 +82,7 @@ class AudioMetrics:
             "clipping_count": self.clipping_count,
             "echo_detected": self.echo_detected,
             "echo_delay_ms": self.echo_delay_ms,
-            "crosstalk_detected": self.crosstalk_detected
+            "crosstalk_detected": self.crosstalk_detected,
         }
 
 
@@ -96,7 +94,7 @@ class AudioDiagnosticsError(GameStudyError):
         message: str,
         check_type: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         context = context or {}
         context.update({"check_type": check_type})
@@ -116,7 +114,7 @@ class EchoDetector:
         sample_rate: int = 24000,
         echo_threshold: float = 0.3,
         min_delay_ms: float = 50.0,
-        max_delay_ms: float = 500.0
+        max_delay_ms: float = 500.0,
     ):
         """Initialize echo detector.
 
@@ -135,9 +133,7 @@ class EchoDetector:
         self.max_delay_samples = int((max_delay_ms / 1000) * sample_rate)
 
     async def detect_echo(
-        self,
-        reference_audio: bytes,
-        captured_audio: bytes
+        self, reference_audio: bytes, captured_audio: bytes
     ) -> tuple[bool, float | None, float]:
         """Detect echo in captured audio compared to reference.
 
@@ -171,21 +167,14 @@ class EchoDetector:
 
             # Run detection in thread pool for CPU-bound work
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None,
-                self._compute_correlation,
-                ref,
-                cap
-            )
+            return await loop.run_in_executor(None, self._compute_correlation, ref, cap)
 
         except Exception as e:
             logger.error(f"Echo detection error: {e}", exc_info=True)
             return False, None, 0.0
 
     def _compute_correlation(
-        self,
-        ref: np.ndarray,
-        cap: np.ndarray
+        self, ref: np.ndarray, cap: np.ndarray
     ) -> tuple[bool, float | None, float]:
         """Compute cross-correlation to detect echo.
 
@@ -197,7 +186,7 @@ class EchoDetector:
             Tuple of (echo_detected, delay_ms, correlation_strength)
         """
         # Compute cross-correlation
-        correlation = np.correlate(cap, ref, mode='full')
+        correlation = np.correlate(cap, ref, mode="full")
 
         # Find peak
         peak_idx = np.argmax(np.abs(correlation))
@@ -217,8 +206,8 @@ class EchoDetector:
 
         # Check for echo
         echo_detected = (
-            correlation_strength >= self.echo_threshold and
-            self.min_delay_samples <= abs(delay_samples) <= self.max_delay_samples
+            correlation_strength >= self.echo_threshold
+            and self.min_delay_samples <= abs(delay_samples) <= self.max_delay_samples
         )
 
         delay_ms = abs(delay_samples) * 1000 / self.sample_rate if echo_detected else None
@@ -237,7 +226,7 @@ class CrosstalkDetector:
         self,
         sample_rate: int = 24000,
         crosstalk_threshold: float = 0.2,
-        analysis_bands: list[tuple[int, int]] | None = None
+        analysis_bands: list[tuple[int, int]] | None = None,
     ):
         """Initialize crosstalk detector.
 
@@ -255,17 +244,15 @@ class CrosstalkDetector:
         # Default frequency bands for voice analysis
         if analysis_bands is None:
             analysis_bands = [
-                (300, 500),    # Low voice
-                (500, 2000),   # Mid voice
+                (300, 500),  # Low voice
+                (500, 2000),  # Mid voice
                 (2000, 4000),  # High voice
                 (4000, 8000),  # Harmonics
             ]
         self.analysis_bands = analysis_bands
 
     async def detect_crosstalk(
-        self,
-        channel_a: bytes,
-        channel_b: bytes
+        self, channel_a: bytes, channel_b: bytes
     ) -> tuple[bool, float, dict[str, float]]:
         """Detect crosstalk between two audio channels.
 
@@ -287,21 +274,14 @@ class CrosstalkDetector:
 
             # Run in thread pool
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None,
-                self._analyze_frequency_crosstalk,
-                a,
-                b
-            )
+            return await loop.run_in_executor(None, self._analyze_frequency_crosstalk, a, b)
 
         except Exception as e:
             logger.error(f"Crosstalk detection error: {e}", exc_info=True)
             return False, 0.0, {}
 
     def _analyze_frequency_crosstalk(
-        self,
-        a: np.ndarray,
-        b: np.ndarray
+        self, a: np.ndarray, b: np.ndarray
     ) -> tuple[bool, float, dict[str, float]]:
         """Analyze frequency spectrum for crosstalk.
 
@@ -319,9 +299,9 @@ class CrosstalkDetector:
 
         # Compute FFT
         n = len(a)
-        freq = fftfreq(n, 1/self.sample_rate)[:n//2]
-        fft_a = np.abs(fft(a)[:n//2])
-        fft_b = np.abs(fft(b)[:n//2])
+        freq = fftfreq(n, 1 / self.sample_rate)[: n // 2]
+        fft_a = np.abs(fft(a)[: n // 2])
+        fft_b = np.abs(fft(b)[: n // 2])
 
         # Analyze each frequency band
         band_crosstalk = {}
@@ -335,8 +315,8 @@ class CrosstalkDetector:
                 continue
 
             # Calculate power in each band
-            power_a = np.sum(fft_a[band_mask]**2)
-            power_b = np.sum(fft_b[band_mask]**2)
+            power_a = np.sum(fft_a[band_mask] ** 2)
+            power_b = np.sum(fft_b[band_mask] ** 2)
 
             # Calculate crosstalk (ratio of weaker to stronger)
             if power_a > 0 and power_b > 0:
@@ -361,7 +341,7 @@ class AudioQualityAnalyzer:
         sample_rate: int = 24000,
         clipping_threshold: float = 0.95,
         min_rms_threshold: float = 0.01,
-        target_rms: float = 0.3
+        target_rms: float = 0.3,
     ):
         """Initialize audio quality analyzer.
 
@@ -377,9 +357,7 @@ class AudioQualityAnalyzer:
         self.target_rms = target_rms
 
     async def analyze_quality(
-        self,
-        audio_data: bytes,
-        reference_data: bytes | None = None
+        self, audio_data: bytes, reference_data: bytes | None = None
     ) -> AudioMetrics:
         """Analyze audio quality metrics.
 
@@ -404,12 +382,7 @@ class AudioQualityAnalyzer:
 
             # Run analysis in thread pool
             loop = asyncio.get_event_loop()
-            metrics = await loop.run_in_executor(
-                None,
-                self._compute_metrics,
-                audio,
-                reference_data
-            )
+            metrics = await loop.run_in_executor(None, self._compute_metrics, audio, reference_data)
 
             return metrics
 
@@ -417,11 +390,7 @@ class AudioQualityAnalyzer:
             logger.error(f"Audio quality analysis error: {e}", exc_info=True)
             return AudioMetrics()
 
-    def _compute_metrics(
-        self,
-        audio: np.ndarray,
-        reference_data: bytes | None
-    ) -> AudioMetrics:
+    def _compute_metrics(self, audio: np.ndarray, reference_data: bytes | None) -> AudioMetrics:
         """Compute audio quality metrics.
 
         Args:
@@ -449,14 +418,13 @@ class AudioQualityAnalyzer:
         # Frequency spectrum
         if SCIPY_AVAILABLE:
             n = len(audio)
-            freq = fftfreq(n, 1/self.sample_rate)[:n//2]
-            magnitude = np.abs(fft(audio)[:n//2])
+            freq = fftfreq(n, 1 / self.sample_rate)[: n // 2]
+            magnitude = np.abs(fft(audio)[: n // 2])
 
             # Store spectrum points (limited resolution)
             step = max(1, len(freq) // 100)
             metrics.frequency_spectrum = [
-                (float(freq[i]), float(magnitude[i]))
-                for i in range(0, len(freq), step)
+                (float(freq[i]), float(magnitude[i])) for i in range(0, len(freq), step)
             ]
 
         # SNR calculation if reference provided
@@ -476,7 +444,7 @@ class AudioQualityAnalyzer:
             if noise_power > 1e-10:
                 metrics.snr_db = float(10 * np.log10(signal_power / noise_power))
             else:
-                metrics.snr_db = float('inf')
+                metrics.snr_db = float("inf")
 
         return metrics
 
@@ -488,7 +456,7 @@ class AudioDiagnostics:
         self,
         sample_rate: int = 24000,
         echo_threshold: float = 0.3,
-        crosstalk_threshold: float = 0.2
+        crosstalk_threshold: float = 0.2,
     ):
         """Initialize audio diagnostics.
 
@@ -499,27 +467,19 @@ class AudioDiagnostics:
         """
         self.sample_rate = sample_rate
 
-        self.echo_detector = EchoDetector(
-            sample_rate=sample_rate,
-            echo_threshold=echo_threshold
-        )
+        self.echo_detector = EchoDetector(sample_rate=sample_rate, echo_threshold=echo_threshold)
 
         self.crosstalk_detector = CrosstalkDetector(
-            sample_rate=sample_rate,
-            crosstalk_threshold=crosstalk_threshold
+            sample_rate=sample_rate, crosstalk_threshold=crosstalk_threshold
         )
 
-        self.quality_analyzer = AudioQualityAnalyzer(
-            sample_rate=sample_rate
-        )
+        self.quality_analyzer = AudioQualityAnalyzer(sample_rate=sample_rate)
 
         self._last_check_time = 0.0
         self._issue_history: list[AudioIssue] = []
 
     async def check_audio_loopback(
-        self,
-        played_audio: bytes,
-        captured_audio: bytes
+        self, played_audio: bytes, captured_audio: bytes
     ) -> tuple[AudioMetrics, list[AudioIssue]]:
         """Check for echo in audio loopback.
 
@@ -534,8 +494,7 @@ class AudioDiagnostics:
 
         # Detect echo
         echo_detected, echo_delay, correlation = await self.echo_detector.detect_echo(
-            played_audio,
-            captured_audio
+            played_audio, captured_audio
         )
 
         # Analyze quality
@@ -546,42 +505,47 @@ class AudioDiagnostics:
             metrics.echo_delay_ms = echo_delay
 
             severity = "warning" if correlation < 0.7 else "error"
-            issues.append(AudioIssue(
-                issue_type=AudioIssueType.ECHO,
-                severity=severity,
-                message=f"Echo detected with {correlation:.2f} correlation at {echo_delay:.1f}ms delay",
-                details={
-                    "correlation": correlation,
-                    "delay_ms": echo_delay
-                }
-            ))
+            issues.append(
+                AudioIssue(
+                    issue_type=AudioIssueType.ECHO,
+                    severity=severity,
+                    message=f"Echo detected with {correlation:.2f} correlation at {echo_delay:.1f}ms delay",
+                    details={"correlation": correlation, "delay_ms": echo_delay},
+                )
+            )
 
         # Check clipping
         if metrics.clipping_count > 0:
-            issues.append(AudioIssue(
-                issue_type=AudioIssueType.CLIPPING,
-                severity="warning",
-                message=f"Audio clipping detected: {metrics.clipping_count} samples",
-                details={"clipping_count": metrics.clipping_count}
-            ))
+            issues.append(
+                AudioIssue(
+                    issue_type=AudioIssueType.CLIPPING,
+                    severity="warning",
+                    message=f"Audio clipping detected: {metrics.clipping_count} samples",
+                    details={"clipping_count": metrics.clipping_count},
+                )
+            )
 
         # Check signal level
         if metrics.rms_level is not None and metrics.rms_level < 0.01:
-            issues.append(AudioIssue(
-                issue_type=AudioIssueType.NO_SIGNAL,
-                severity="warning",
-                message=f"Low audio signal: RMS={metrics.rms_level:.4f}",
-                details={"rms_level": metrics.rms_level}
-            ))
+            issues.append(
+                AudioIssue(
+                    issue_type=AudioIssueType.NO_SIGNAL,
+                    severity="warning",
+                    message=f"Low audio signal: RMS={metrics.rms_level:.4f}",
+                    details={"rms_level": metrics.rms_level},
+                )
+            )
 
         # Check SNR
         if metrics.snr_db is not None and metrics.snr_db < 10:
-            issues.append(AudioIssue(
-                issue_type=AudioIssueType.LOW_SNR,
-                severity="warning" if metrics.snr_db > 5 else "error",
-                message=f"Low SNR detected: {metrics.snr_db:.1f} dB",
-                details={"snr_db": metrics.snr_db}
-            ))
+            issues.append(
+                AudioIssue(
+                    issue_type=AudioIssueType.LOW_SNR,
+                    severity="warning" if metrics.snr_db > 5 else "error",
+                    message=f"Low SNR detected: {metrics.snr_db:.1f} dB",
+                    details={"snr_db": metrics.snr_db},
+                )
+            )
 
         # Store issues
         self._issue_history.extend(issues)
@@ -593,9 +557,7 @@ class AudioDiagnostics:
         return metrics, issues
 
     async def check_crosstalk(
-        self,
-        channel_a: bytes,
-        channel_b: bytes
+        self, channel_a: bytes, channel_b: bytes
     ) -> tuple[bool, dict[str, float], list[AudioIssue]]:
         """Check for crosstalk between audio channels.
 
@@ -609,26 +571,23 @@ class AudioDiagnostics:
         issues = []
 
         detected, level, bands = await self.crosstalk_detector.detect_crosstalk(
-            channel_a,
-            channel_b
+            channel_a, channel_b
         )
 
         if detected:
-            issues.append(AudioIssue(
-                issue_type=AudioIssueType.CROSSTALK,
-                severity="warning" if level < 0.5 else "error",
-                message=f"Crosstalk detected: {level:.2f}",
-                details={"bands": bands, "level": level}
-            ))
+            issues.append(
+                AudioIssue(
+                    issue_type=AudioIssueType.CROSSTALK,
+                    severity="warning" if level < 0.5 else "error",
+                    message=f"Crosstalk detected: {level:.2f}",
+                    details={"bands": bands, "level": level},
+                )
+            )
 
         self._issue_history.extend(issues)
         return detected, bands, issues
 
-    async def measure_latency(
-        self,
-        start_time: float,
-        end_time: float
-    ) -> float:
+    async def measure_latency(self, start_time: float, end_time: float) -> float:
         """Measure audio processing latency.
 
         Args:
@@ -646,7 +605,7 @@ class AudioDiagnostics:
                 issue_type=AudioIssueType.HIGH_LATENCY,
                 severity="warning" if latency_ms < 500 else "error",
                 message=f"High latency detected: {latency_ms:.1f}ms",
-                details={"latency_ms": latency_ms}
+                details={"latency_ms": latency_ms},
             )
             self._issue_history.append(issue)
 
@@ -669,9 +628,7 @@ class AudioDiagnostics:
 
 
 async def create_audio_diagnostics(
-    sample_rate: int = 24000,
-    echo_threshold: float = 0.3,
-    crosstalk_threshold: float = 0.2
+    sample_rate: int = 24000, echo_threshold: float = 0.3, crosstalk_threshold: float = 0.2
 ) -> AudioDiagnostics:
     """Create an AudioDiagnostics instance.
 
@@ -686,5 +643,5 @@ async def create_audio_diagnostics(
     return AudioDiagnostics(
         sample_rate=sample_rate,
         echo_threshold=echo_threshold,
-        crosstalk_threshold=crosstalk_threshold
+        crosstalk_threshold=crosstalk_threshold,
     )

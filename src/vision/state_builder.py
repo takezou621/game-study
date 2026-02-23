@@ -2,30 +2,8 @@
 
 from typing import Any
 
+from utils.dependencies import PYDANTIC_AVAILABLE, BaseModel, Field, field_validator
 from utils.time import get_timestamp_ms
-
-try:
-    from pydantic import BaseModel, Field, field_validator
-    PYDANTIC_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AVAILABLE = False
-    # Create a minimal BaseModel fallback if pydantic is not available
-    class BaseModel:
-        """Fallback BaseModel for when pydantic is not available."""
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-        def model_dump(self):
-            return self.__dict__
-
-        @classmethod
-        def model_validate(cls, data):
-            return cls(**data)
-
-    def Field(default=None, **kwargs):
-        return default
-
 
 # Movement state constants
 MOVEMENT_STATE_COMBAT = "combat"
@@ -34,6 +12,7 @@ MOVEMENT_STATES = [MOVEMENT_STATE_COMBAT, MOVEMENT_STATE_NON_COMBAT]
 
 
 if PYDANTIC_AVAILABLE:
+
     class StateValueModel(BaseModel):
         """Pydantic model for state value with metadata."""
 
@@ -42,7 +21,7 @@ if PYDANTIC_AVAILABLE:
         confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0.0-1.0)")
         ts_ms: int = Field(..., description="Timestamp in milliseconds")
 
-        @field_validator('confidence')
+        @field_validator("confidence")
         @classmethod
         def validate_confidence(cls, v: float) -> float:
             """Validate confidence is in valid range."""
@@ -53,70 +32,90 @@ if PYDANTIC_AVAILABLE:
         class Config:
             arbitrary_types_allowed = True
 
-
     class PlayerStatusModel(BaseModel):
         """Pydantic model for player status."""
 
-        hp: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=100, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-        shield: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-        is_knocked: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-
+        hp: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=100, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        shield: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        is_knocked: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class WeaponInfoModel(BaseModel):
         """Pydantic model for weapon information."""
 
-        name: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-        ammo: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-
+        name: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        ammo: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class InventoryInfoModel(BaseModel):
         """Pydantic model for inventory information."""
 
-        materials: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-
+        materials: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class StormInfoModel(BaseModel):
         """Pydantic model for storm information."""
 
-        phase: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-        damage: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-        in_storm: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-        is_shrinking: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-        next_circle_distance: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-
+        phase: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        damage: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        in_storm: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        is_shrinking: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=False, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        next_circle_distance: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class SessionInfoModel(BaseModel):
         """Pydantic model for session information."""
 
-        phase: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-        inactivity_duration_ms: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-
+        phase: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        inactivity_duration_ms: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class PlayerModel(BaseModel):
         """Pydantic model for player state."""
@@ -125,23 +124,24 @@ if PYDANTIC_AVAILABLE:
         weapon: WeaponInfoModel = Field(default_factory=WeaponInfoModel)
         inventory: InventoryInfoModel = Field(default_factory=InventoryInfoModel)
 
-
     class WorldModel(BaseModel):
         """Pydantic model for world state."""
 
         storm: StormInfoModel = Field(default_factory=StormInfoModel)
 
-
     class SessionModel(BaseModel):
         """Pydantic model for session state."""
 
-        phase: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
-        ))
-        inactivity_duration_ms: StateValueModel = Field(default_factory=lambda: StateValueModel(
-            value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
-        ))
-
+        phase: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=None, source="default", confidence=0.0, ts_ms=get_timestamp_ms()
+            )
+        )
+        inactivity_duration_ms: StateValueModel = Field(
+            default_factory=lambda: StateValueModel(
+                value=0, source="default", confidence=1.0, ts_ms=get_timestamp_ms()
+            )
+        )
 
     class GameStateModel(BaseModel):
         """Pydantic model for complete game state."""
@@ -168,39 +168,99 @@ class StateBuilder:
         return {
             "player": {
                 "status": {
-                    "hp": {"value": 100, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
-                    "shield": {"value": 0, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
-                    "is_knocked": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                    "hp": {
+                        "value": 100,
+                        "source": "default",
+                        "confidence": 1.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "shield": {
+                        "value": 0,
+                        "source": "default",
+                        "confidence": 1.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "is_knocked": {
+                        "value": False,
+                        "source": "default",
+                        "confidence": 1.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
                 },
                 "weapon": {
-                    "name": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
-                    "ammo": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "name": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "ammo": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
                 },
                 "inventory": {
-                    "materials": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "materials": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
                 },
             },
             "world": {
                 "storm": {
-                    "phase": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
-                    "damage": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
-                    "in_storm": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
-                    "is_shrinking": {"value": False, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
-                    "next_circle_distance": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
+                    "phase": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "damage": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "in_storm": {
+                        "value": False,
+                        "source": "default",
+                        "confidence": 1.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "is_shrinking": {
+                        "value": False,
+                        "source": "default",
+                        "confidence": 1.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
+                    "next_circle_distance": {
+                        "value": None,
+                        "source": "default",
+                        "confidence": 0.0,
+                        "ts_ms": get_timestamp_ms(),
+                    },
                 },
             },
             "session": {
-                "phase": {"value": None, "source": "default", "confidence": 0.0, "ts_ms": get_timestamp_ms()},
-                "inactivity_duration_ms": {"value": 0, "source": "default", "confidence": 1.0, "ts_ms": get_timestamp_ms()},
+                "phase": {
+                    "value": None,
+                    "source": "default",
+                    "confidence": 0.0,
+                    "ts_ms": get_timestamp_ms(),
+                },
+                "inactivity_duration_ms": {
+                    "value": 0,
+                    "source": "default",
+                    "confidence": 1.0,
+                    "ts_ms": get_timestamp_ms(),
+                },
             },
         }
 
-    def _validate_state_value(
-        self,
-        value: Any,
-        source: str,
-        confidence: float
-    ) -> dict[str, Any]:
+    def _validate_state_value(self, value: Any, source: str, confidence: float) -> dict[str, Any]:
         """
         Validate a state value using Pydantic if available.
 
@@ -222,10 +282,7 @@ class StateBuilder:
         if PYDANTIC_AVAILABLE:
             try:
                 validated = StateValueModel(
-                    value=value,
-                    source=source,
-                    confidence=confidence,
-                    ts_ms=get_timestamp_ms()
+                    value=value, source=source, confidence=confidence, ts_ms=get_timestamp_ms()
                 )
                 return validated.model_dump()
             except Exception:
@@ -234,23 +291,17 @@ class StateBuilder:
                     "value": value,
                     "source": source,
                     "confidence": confidence,
-                    "ts_ms": get_timestamp_ms()
+                    "ts_ms": get_timestamp_ms(),
                 }
         else:
             return {
                 "value": value,
                 "source": source,
                 "confidence": confidence,
-                "ts_ms": get_timestamp_ms()
+                "ts_ms": get_timestamp_ms(),
             }
 
-    def update_field(
-        self,
-        path: str,
-        value: Any,
-        source: str,
-        confidence: float
-    ) -> None:
+    def update_field(self, path: str, value: Any, source: str, confidence: float) -> None:
         """
         Update a specific field in the state.
 
@@ -263,7 +314,7 @@ class StateBuilder:
         Raises:
             ValueError: If confidence is out of valid range
         """
-        keys = path.split('.')
+        keys = path.split(".")
         current = self.current_state
 
         # Navigate to the parent dict

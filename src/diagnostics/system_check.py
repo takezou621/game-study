@@ -11,97 +11,24 @@ import asyncio
 import os
 import platform
 import time
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any
 
-try:
+from diagnostics.diagnostics_types import (
+    CheckResult,
+    CheckStatus,
+    DeviceInfo,
+    SystemComponent,
+    SystemInfo,
+)
+from utils.dependencies import PSUTIL_AVAILABLE
+
+if PSUTIL_AVAILABLE:
     import psutil
-    PSUTIL_AVAILABLE = True
-except ImportError:
-    PSUTIL_AVAILABLE = False
 
 from utils.exceptions import GameStudyError
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class CheckStatus(Enum):
-    """Status of a diagnostic check."""
-    PASSED = "passed"
-    FAILED = "failed"
-    WARNING = "warning"
-    SKIPPED = "skipped"
-
-
-class SystemComponent(Enum):
-    """System components that can be checked."""
-    MICROPHONE = "microphone"
-    SPEAKER = "speaker"
-    NETWORK = "network"
-    MEMORY = "memory"
-    CPU = "cpu"
-    DISK = "disk"
-    PERMISSIONS = "permissions"
-
-
-@dataclass
-class CheckResult:
-    """Result of a diagnostic check."""
-    component: SystemComponent
-    status: CheckStatus
-    message: str
-    timestamp: float = field(default_factory=time.time)
-    details: dict[str, Any] = field(default_factory=dict)
-    remediation: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        return {
-            "component": self.component.value,
-            "status": self.status.value,
-            "message": self.message,
-            "timestamp": self.timestamp,
-            "details": self.details,
-            "remediation": self.remediation
-        }
-
-
-@dataclass
-class SystemInfo:
-    """System information."""
-    os: str
-    os_version: str
-    python_version: str
-    cpu_count: int | None = None
-    total_memory_gb: float | None = None
-    available_memory_gb: float | None = None
-    disk_usage_percent: float | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        return {
-            "os": self.os,
-            "os_version": self.os_version,
-            "python_version": self.python_version,
-            "cpu_count": self.cpu_count,
-            "total_memory_gb": self.total_memory_gb,
-            "available_memory_gb": self.available_memory_gb,
-            "disk_usage_percent": self.disk_usage_percent
-        }
-
-
-@dataclass
-class DeviceInfo:
-    """Audio device information."""
-    name: str
-    index: int
-    channels: int
-    sample_rate: int
-    is_input: bool
-    is_output: bool
-    is_default: bool = False
 
 
 class SystemDiagnosticsError(GameStudyError):
@@ -112,7 +39,7 @@ class SystemDiagnosticsError(GameStudyError):
         message: str,
         component: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         context = context or {}
         context.update({"component": component})
@@ -131,12 +58,14 @@ class AudioDeviceChecker:
         # Try to import audio libraries
         try:
             import pyaudio
+
             self.pyaudio = pyaudio
         except ImportError:
             pass
 
         try:
             import sounddevice as sd
+
             self.sounddevice = sd
         except ImportError:
             pass
@@ -156,25 +85,29 @@ class AudioDeviceChecker:
                 for i in range(p.get_device_count()):
                     info = p.get_device_info_by_index(i)
 
-                    if info['maxInputChannels'] > 0:
-                        input_devices.append(DeviceInfo(
-                            name=info['name'],
-                            index=i,
-                            channels=int(info['maxInputChannels']),
-                            sample_rate=int(info['defaultSampleRate']),
-                            is_input=True,
-                            is_output=False
-                        ))
+                    if info["maxInputChannels"] > 0:
+                        input_devices.append(
+                            DeviceInfo(
+                                name=info["name"],
+                                index=i,
+                                channels=int(info["maxInputChannels"]),
+                                sample_rate=int(info["defaultSampleRate"]),
+                                is_input=True,
+                                is_output=False,
+                            )
+                        )
 
-                    if info['maxOutputChannels'] > 0:
-                        output_devices.append(DeviceInfo(
-                            name=info['name'],
-                            index=i,
-                            channels=int(info['maxOutputChannels']),
-                            sample_rate=int(info['defaultSampleRate']),
-                            is_input=False,
-                            is_output=True
-                        ))
+                    if info["maxOutputChannels"] > 0:
+                        output_devices.append(
+                            DeviceInfo(
+                                name=info["name"],
+                                index=i,
+                                channels=int(info["maxOutputChannels"]),
+                                sample_rate=int(info["defaultSampleRate"]),
+                                is_input=False,
+                                is_output=True,
+                            )
+                        )
 
                 p.terminate()
             except Exception as e:
@@ -185,25 +118,29 @@ class AudioDeviceChecker:
                 devices = self.sounddevice.query_devices()
 
                 for i, device in enumerate(devices):
-                    if device['max_input_channels'] > 0:
-                        input_devices.append(DeviceInfo(
-                            name=device['name'],
-                            index=i,
-                            channels=int(device['max_input_channels']),
-                            sample_rate=int(device['default_samplerate']),
-                            is_input=True,
-                            is_output=False
-                        ))
+                    if device["max_input_channels"] > 0:
+                        input_devices.append(
+                            DeviceInfo(
+                                name=device["name"],
+                                index=i,
+                                channels=int(device["max_input_channels"]),
+                                sample_rate=int(device["default_samplerate"]),
+                                is_input=True,
+                                is_output=False,
+                            )
+                        )
 
-                    if device['max_output_channels'] > 0:
-                        output_devices.append(DeviceInfo(
-                            name=device['name'],
-                            index=i,
-                            channels=int(device['max_output_channels']),
-                            sample_rate=int(device['default_samplerate']),
-                            is_input=False,
-                            is_output=True
-                        ))
+                    if device["max_output_channels"] > 0:
+                        output_devices.append(
+                            DeviceInfo(
+                                name=device["name"],
+                                index=i,
+                                channels=int(device["max_output_channels"]),
+                                sample_rate=int(device["default_samplerate"]),
+                                is_input=False,
+                                is_output=True,
+                            )
+                        )
             except Exception as e:
                 logger.warning(f"Error getting sounddevice devices: {e}")
 
@@ -225,7 +162,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.MICROPHONE,
                 status=CheckStatus.FAILED,
                 message="No microphone devices found",
-                remediation="Connect a microphone or check audio settings"
+                remediation="Connect a microphone or check audio settings",
             )
 
         # Find device to check
@@ -244,7 +181,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.MICROPHONE,
                 status=CheckStatus.FAILED,
                 message=f"Microphone device {device_index} not found",
-                remediation="Check device index in configuration"
+                remediation="Check device index in configuration",
             )
 
         # Try to open the device
@@ -258,7 +195,7 @@ class AudioDeviceChecker:
                     component=SystemComponent.MICROPHONE,
                     status=CheckStatus.WARNING,
                     message="No audio library available for testing",
-                    remediation="Install pyaudio or sounddevice: pip install pyaudio"
+                    remediation="Install pyaudio or sounddevice: pip install pyaudio",
                 )
 
         except Exception as e:
@@ -266,7 +203,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.MICROPHONE,
                 status=CheckStatus.FAILED,
                 message=f"Microphone check failed: {e}",
-                remediation="Check microphone permissions and connections"
+                remediation="Check microphone permissions and connections",
             )
 
     async def _check_pyaudio_microphone(self, device: DeviceInfo) -> CheckResult:
@@ -283,7 +220,7 @@ class AudioDeviceChecker:
                         rate=device.sample_rate,
                         input=True,
                         input_device_index=device.index,
-                        frames_per_buffer=1024
+                        frames_per_buffer=1024,
                     )
                     # Read a small chunk to verify
                     data = stream.read(1024, exception_on_overflow=False)
@@ -302,8 +239,8 @@ class AudioDeviceChecker:
                 details={
                     "device_name": device.name,
                     "sample_rate": device.sample_rate,
-                    "channels": device.channels
-                }
+                    "channels": device.channels,
+                },
             )
 
         except OSError as e:
@@ -311,7 +248,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.MICROPHONE,
                 status=CheckStatus.FAILED,
                 message=f"Cannot access microphone: {e}",
-                remediation="Check microphone permissions (macOS: System Preferences > Privacy)"
+                remediation="Check microphone permissions (macOS: System Preferences > Privacy)",
             )
         except Exception:
             raise
@@ -324,12 +261,13 @@ class AudioDeviceChecker:
             def test_record():
                 # Record a short sample
                 import sounddevice as sd
+
                 data = sd.rec(
                     1024,
                     samplerate=device.sample_rate,
                     channels=1,
-                    dtype='int16',
-                    device=device.index
+                    dtype="int16",
+                    device=device.index,
                 )
                 sd.wait()
                 return True
@@ -343,8 +281,8 @@ class AudioDeviceChecker:
                 details={
                     "device_name": device.name,
                     "sample_rate": device.sample_rate,
-                    "channels": device.channels
-                }
+                    "channels": device.channels,
+                },
             )
 
         except Exception:
@@ -366,7 +304,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.SPEAKER,
                 status=CheckStatus.FAILED,
                 message="No speaker devices found",
-                remediation="Connect speakers or check audio settings"
+                remediation="Connect speakers or check audio settings",
             )
 
         # Find device to check
@@ -384,7 +322,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.SPEAKER,
                 status=CheckStatus.FAILED,
                 message=f"Speaker device {device_index} not found",
-                details={"device_index": device_index}
+                details={"device_index": device_index},
             )
 
         # Try to open the device
@@ -396,17 +334,14 @@ class AudioDeviceChecker:
                     component=SystemComponent.SPEAKER,
                     status=CheckStatus.WARNING,
                     message="Speaker available but audio test not performed",
-                    details={
-                        "device_name": device.name,
-                        "sample_rate": device.sample_rate
-                    }
+                    details={"device_name": device.name, "sample_rate": device.sample_rate},
                 )
             else:
                 return CheckResult(
                     component=SystemComponent.SPEAKER,
                     status=CheckStatus.WARNING,
                     message="No audio library available for testing",
-                    remediation="Install pyaudio or sounddevice"
+                    remediation="Install pyaudio or sounddevice",
                 )
 
         except Exception as e:
@@ -414,7 +349,7 @@ class AudioDeviceChecker:
                 component=SystemComponent.SPEAKER,
                 status=CheckStatus.FAILED,
                 message=f"Speaker check failed: {e}",
-                remediation="Check speaker connections and volume"
+                remediation="Check speaker connections and volume",
             )
 
     async def _check_pyaudio_speaker(self, device: DeviceInfo) -> CheckResult:
@@ -431,10 +366,10 @@ class AudioDeviceChecker:
                         rate=device.sample_rate,
                         output=True,
                         output_device_index=device.index,
-                        frames_per_buffer=1024
+                        frames_per_buffer=1024,
                     )
                     # Write a silent chunk to verify
-                    silence = b'\x00\x00' * 1024
+                    silence = b"\x00\x00" * 1024
                     stream.write(silence)
                     stream.close()
                     return True
@@ -451,8 +386,8 @@ class AudioDeviceChecker:
                 details={
                     "device_name": device.name,
                     "sample_rate": device.sample_rate,
-                    "channels": device.channels
-                }
+                    "channels": device.channels,
+                },
             )
 
         except Exception:
@@ -471,7 +406,7 @@ class NetworkChecker:
         self.test_hosts = test_hosts or [
             "api.openai.com",
             "8.8.8.8",  # Google DNS
-            "1.1.1.1"   # Cloudflare DNS
+            "1.1.1.1",  # Cloudflare DNS
         ]
 
     async def check_connectivity(self, host: str, timeout: float = 5.0) -> tuple[bool, float]:
@@ -490,8 +425,7 @@ class NetworkChecker:
 
             # Try to create a connection
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, 443),
-                timeout=timeout
+                asyncio.open_connection(host, 443), timeout=timeout
             )
 
             latency_ms = (time.time() - start_time) * 1000
@@ -516,11 +450,7 @@ class NetworkChecker:
 
         for host in self.test_hosts:
             connected, latency = await self.check_connectivity(host)
-            results.append({
-                "host": host,
-                "connected": connected,
-                "latency_ms": latency
-            })
+            results.append({"host": host, "connected": connected, "latency_ms": latency})
 
             if connected:
                 connected_count += 1
@@ -533,7 +463,9 @@ class NetworkChecker:
             remediation = "Check internet connection and firewall settings"
         elif connected_count < len(self.test_hosts):
             status = CheckStatus.WARNING
-            message = f"Partial network connectivity ({connected_count}/{len(self.test_hosts)} hosts)"
+            message = (
+                f"Partial network connectivity ({connected_count}/{len(self.test_hosts)} hosts)"
+            )
             remediation = "Some services may be unavailable"
         else:
             avg_latency = total_latency / connected_count
@@ -553,9 +485,9 @@ class NetworkChecker:
             details={
                 "hosts_tested": results,
                 "connected_count": connected_count,
-                "average_latency_ms": total_latency / max(connected_count, 1)
+                "average_latency_ms": total_latency / max(connected_count, 1),
             },
-            remediation=remediation
+            remediation=remediation,
         )
 
     async def check_api_reachable(self, api_url: str = "api.openai.com") -> CheckResult:
@@ -574,7 +506,7 @@ class NetworkChecker:
                 component=SystemComponent.NETWORK,
                 status=CheckStatus.PASSED,
                 message=f"API reachable ({latency:.1f}ms latency)",
-                details={"api_host": api_url, "latency_ms": latency}
+                details={"api_host": api_url, "latency_ms": latency},
             )
         else:
             return CheckResult(
@@ -582,7 +514,7 @@ class NetworkChecker:
                 status=CheckStatus.FAILED,
                 message=f"API unreachable: {api_url}",
                 details={"api_host": api_url},
-                remediation="Check internet connection and API status"
+                remediation="Check internet connection and API status",
             )
 
 
@@ -608,7 +540,7 @@ class PerformanceChecker:
         info = SystemInfo(
             os=platform.system(),
             os_version=platform.release(),
-            python_version=platform.python_version()
+            python_version=platform.python_version(),
         )
 
         if PSUTIL_AVAILABLE:
@@ -618,7 +550,7 @@ class PerformanceChecker:
                 info.total_memory_gb = memory.total / (1024**3)
                 info.available_memory_gb = memory.available / (1024**3)
 
-                disk = psutil.disk_usage('/')
+                disk = psutil.disk_usage("/")
                 info.disk_usage_percent = disk.percent
             except Exception as e:
                 logger.warning(f"Error getting system info: {e}")
@@ -635,7 +567,7 @@ class PerformanceChecker:
             return CheckResult(
                 component=SystemComponent.MEMORY,
                 status=CheckStatus.SKIPPED,
-                message="Memory check skipped (psutil not available)"
+                message="Memory check skipped (psutil not available)",
             )
 
         try:
@@ -653,9 +585,9 @@ class PerformanceChecker:
                     details={
                         "available_gb": available_gb,
                         "total_gb": total_gb,
-                        "used_percent": used_percent
+                        "used_percent": used_percent,
                     },
-                    remediation="Close unnecessary applications to free memory"
+                    remediation="Close unnecessary applications to free memory",
                 )
             else:
                 return CheckResult(
@@ -665,15 +597,15 @@ class PerformanceChecker:
                     details={
                         "available_gb": available_gb,
                         "total_gb": total_gb,
-                        "used_percent": used_percent
-                    }
+                        "used_percent": used_percent,
+                    },
                 )
 
         except Exception as e:
             return CheckResult(
                 component=SystemComponent.MEMORY,
                 status=CheckStatus.FAILED,
-                message=f"Memory check failed: {e}"
+                message=f"Memory check failed: {e}",
             )
 
     async def check_cpu(self) -> CheckResult:
@@ -686,15 +618,12 @@ class PerformanceChecker:
             return CheckResult(
                 component=SystemComponent.CPU,
                 status=CheckStatus.SKIPPED,
-                message="CPU check skipped (psutil not available)"
+                message="CPU check skipped (psutil not available)",
             )
 
         try:
             loop = asyncio.get_event_loop()
-            cpu_percent = await loop.run_in_executor(
-                None,
-                lambda: psutil.cpu_percent(interval=0.5)
-            )
+            cpu_percent = await loop.run_in_executor(None, lambda: psutil.cpu_percent(interval=0.5))
 
             cpu_count = psutil.cpu_count()
 
@@ -715,18 +644,15 @@ class PerformanceChecker:
                 component=SystemComponent.CPU,
                 status=status,
                 message=message,
-                details={
-                    "cpu_percent": cpu_percent,
-                    "cpu_count": cpu_count
-                },
-                remediation=remediation
+                details={"cpu_percent": cpu_percent, "cpu_count": cpu_count},
+                remediation=remediation,
             )
 
         except Exception as e:
             return CheckResult(
                 component=SystemComponent.CPU,
                 status=CheckStatus.FAILED,
-                message=f"CPU check failed: {e}"
+                message=f"CPU check failed: {e}",
             )
 
     async def check_disk(self) -> CheckResult:
@@ -739,15 +665,12 @@ class PerformanceChecker:
             return CheckResult(
                 component=SystemComponent.DISK,
                 status=CheckStatus.SKIPPED,
-                message="Disk check skipped (psutil not available)"
+                message="Disk check skipped (psutil not available)",
             )
 
         try:
             loop = asyncio.get_event_loop()
-            disk = await loop.run_in_executor(
-                None,
-                lambda: psutil.disk_usage('/')
-            )
+            disk = await loop.run_in_executor(None, lambda: psutil.disk_usage("/"))
 
             used_percent = disk.percent
             free_gb = disk.free / (1024**3)
@@ -757,28 +680,22 @@ class PerformanceChecker:
                     component=SystemComponent.DISK,
                     status=CheckStatus.FAILED if used_percent > 98 else CheckStatus.WARNING,
                     message=f"Low disk space: {free_gb:.2f}GB free ({used_percent:.1f}% used)",
-                    details={
-                        "free_gb": free_gb,
-                        "used_percent": used_percent
-                    },
-                    remediation="Free up disk space by removing unnecessary files"
+                    details={"free_gb": free_gb, "used_percent": used_percent},
+                    remediation="Free up disk space by removing unnecessary files",
                 )
             else:
                 return CheckResult(
                     component=SystemComponent.DISK,
                     status=CheckStatus.PASSED,
                     message=f"Disk space OK: {free_gb:.2f}GB free ({used_percent:.1f}% used)",
-                    details={
-                        "free_gb": free_gb,
-                        "used_percent": used_percent
-                    }
+                    details={"free_gb": free_gb, "used_percent": used_percent},
                 )
 
         except Exception as e:
             return CheckResult(
                 component=SystemComponent.DISK,
                 status=CheckStatus.FAILED,
-                message=f"Disk check failed: {e}"
+                message=f"Disk check failed: {e}",
             )
 
 
@@ -801,25 +718,26 @@ class PermissionChecker:
                 component=SystemComponent.PERMISSIONS,
                 status=CheckStatus.WARNING,
                 message="Microphone permission status unknown (requires runtime check)",
-                remediation="Grant microphone access in System Preferences > Privacy & Security > Microphone"
+                remediation="Grant microphone access in System Preferences > Privacy & Security > Microphone",
             )
         elif system == "Linux":
             # Check if user is in audio group
             try:
                 import grp
+
                 audio_group = grp.getgrnam("audio")
                 if os.getuid() in audio_group.gr_mem:
                     return CheckResult(
                         component=SystemComponent.PERMISSIONS,
                         status=CheckStatus.PASSED,
-                        message="User is in audio group"
+                        message="User is in audio group",
                     )
                 else:
                     return CheckResult(
                         component=SystemComponent.PERMISSIONS,
                         status=CheckStatus.WARNING,
                         message="User not in audio group",
-                        remediation="Add user to audio group: sudo usermod -a -G audio $USER"
+                        remediation="Add user to audio group: sudo usermod -a -G audio $USER",
                     )
             except Exception:
                 pass
@@ -827,7 +745,7 @@ class PermissionChecker:
         return CheckResult(
             component=SystemComponent.PERMISSIONS,
             status=CheckStatus.SKIPPED,
-            message="Permission check not available on this platform"
+            message="Permission check not available on this platform",
         )
 
     @staticmethod
@@ -844,13 +762,13 @@ class PermissionChecker:
                 component=SystemComponent.PERMISSIONS,
                 status=CheckStatus.WARNING,
                 message="Screen recording permission requires runtime check",
-                remediation="Grant screen recording in System Preferences > Privacy & Security > Screen Recording"
+                remediation="Grant screen recording in System Preferences > Privacy & Security > Screen Recording",
             )
 
         return CheckResult(
             component=SystemComponent.PERMISSIONS,
             status=CheckStatus.SKIPPED,
-            message="Screen recording permission check not needed on this platform"
+            message="Screen recording permission check not needed on this platform",
         )
 
 
@@ -861,7 +779,7 @@ class SystemDiagnostics:
         self,
         min_memory_gb: float = 1.0,
         min_disk_percent: float = 90.0,
-        test_hosts: list[str] | None = None
+        test_hosts: list[str] | None = None,
     ):
         """Initialize system diagnostics.
 
@@ -979,9 +897,7 @@ class SystemDiagnostics:
 
 
 async def create_system_diagnostics(
-    min_memory_gb: float = 1.0,
-    min_disk_percent: float = 90.0,
-    test_hosts: list[str] | None = None
+    min_memory_gb: float = 1.0, min_disk_percent: float = 90.0, test_hosts: list[str] | None = None
 ) -> SystemDiagnostics:
     """Create a SystemDiagnostics instance.
 
@@ -994,7 +910,5 @@ async def create_system_diagnostics(
         Configured SystemDiagnostics instance
     """
     return SystemDiagnostics(
-        min_memory_gb=min_memory_gb,
-        min_disk_percent=min_disk_percent,
-        test_hosts=test_hosts
+        min_memory_gb=min_memory_gb, min_disk_percent=min_disk_percent, test_hosts=test_hosts
     )
