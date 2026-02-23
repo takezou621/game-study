@@ -7,65 +7,27 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass, field
-from enum import Enum
 from queue import Empty, Queue
 from typing import Any
 
-try:
-    from openai import AsyncOpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
+from dialogue.voice_types import COMBAT_TEMPLATES, AudioChunk, SpeechState, VoiceResponse
+from utils.dependencies import OPENAI_AVAILABLE, WEBSOCKETS_AVAILABLE
 
-try:
+if OPENAI_AVAILABLE:
+    from openai import AsyncOpenAI
+
+if WEBSOCKETS_AVAILABLE:
     import websockets
-    WEBSOCKETS_AVAILABLE = True
-except ImportError:
-    WEBSOCKETS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
 # Import constants with fallback for standalone usage
 try:
-    from constants import (
-        DEFAULT_COOLDOWN_MS,
-        DEFAULT_MAX_RESPONSE_LENGTH_MS,
-        MAX_TEXT_LENGTH,
-    )
+    from constants import DEFAULT_COOLDOWN_MS, DEFAULT_MAX_RESPONSE_LENGTH_MS, MAX_TEXT_LENGTH
 except ImportError:
     DEFAULT_COOLDOWN_MS = 3000
     DEFAULT_MAX_RESPONSE_LENGTH_MS = 10000
     MAX_TEXT_LENGTH = 500
-
-
-class SpeechState(Enum):
-    """Current speech state."""
-    IDLE = "idle"
-    SPEAKING = "speaking"
-    INTERRUPTED = "interrupted"
-
-
-@dataclass
-class VoiceResponse:
-    """Voice response from Realtime API."""
-    text: str
-    audio_data: bytes | None = None
-    duration_ms: int | None = None
-    timestamp: float = None
-    priority: int = 2
-    interrupted: bool = False
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = time.time()
-
-
-@dataclass
-class AudioChunk:
-    """Audio chunk for playback queue."""
-    data: bytes
-    timestamp: float = field(default_factory=time.time)
 
 
 class RealtimeVoiceClient:
@@ -83,19 +45,6 @@ class RealtimeVoiceClient:
     - Cooldown management
     """
 
-    # Short response templates for combat situations
-    COMBAT_TEMPLATES = {
-        0: {  # P0 - Survival
-            "low_hp": "Low HP! Cover!",
-            "knocked": "Knocked! Ping!",
-            "storm": "Storm! Move!",
-        },
-        1: {  # P1 - Tactical
-            "rotate": "Rotate now!",
-            "storm_shrinking": "Storm moving!",
-        }
-    }
-
     def __init__(
         self,
         api_key: str | None = None,
@@ -105,7 +54,7 @@ class RealtimeVoiceClient:
         cooldown_ms: int = DEFAULT_COOLDOWN_MS,
         max_response_length_ms: int = DEFAULT_MAX_RESPONSE_LENGTH_MS,
         enable_audio_output: bool = True,
-        use_realtime_api: bool = True
+        use_realtime_api: bool = True,
     ):
         """
         Initialize Realtime Voice client.
@@ -153,7 +102,7 @@ class RealtimeVoiceClient:
             return
 
         # Validate API key format
-        if resolved_api_key and not resolved_api_key.startswith('sk-'):
+        if resolved_api_key and not resolved_api_key.startswith("sk-"):
             logger.warning("API key format appears invalid (should start with 'sk-')")
 
         self._api_key_validated = True
@@ -193,7 +142,7 @@ class RealtimeVoiceClient:
             ValueError: If API key is not available
         """
         # First check stored key from constructor
-        api_key = getattr(self, '_resolved_api_key', None)
+        api_key = getattr(self, "_resolved_api_key", None)
         if api_key:
             return api_key
 
@@ -206,7 +155,7 @@ class RealtimeVoiceClient:
     def _load_system_prompt(self, path: str | None) -> str:
         """Load system prompt from file."""
         if path and os.path.exists(path):
-            with open(path, encoding='utf-8') as f:
+            with open(path, encoding="utf-8") as f:
                 return f.read()
 
         return """You are an AI English teacher and gaming coach for Fortnite players.
@@ -233,6 +182,7 @@ During combat, ALWAYS use the shortest possible response:
 
     def _start_event_loop(self):
         """Start event loop in separate thread."""
+
         def run_loop():
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
@@ -245,11 +195,7 @@ During combat, ALWAYS use the shortest possible response:
         while self.loop is None:
             time.sleep(0.01)
 
-    def _get_short_response(
-        self,
-        trigger_info: dict[str, Any],
-        movement_state: str
-    ) -> str | None:
+    def _get_short_response(self, trigger_info: dict[str, Any], movement_state: str) -> str | None:
         """
         Get short response for combat situations.
 
@@ -263,11 +209,11 @@ During combat, ALWAYS use the shortest possible response:
         if movement_state != "combat":
             return None
 
-        priority = trigger_info.get('priority', 2)
-        trigger_id = trigger_info.get('rule_id', '')
+        priority = trigger_info.get("priority", 2)
+        trigger_id = trigger_info.get("rule_id", "")
 
-        if priority in self.COMBAT_TEMPLATES:
-            for key, template in self.COMBAT_TEMPLATES[priority].items():
+        if priority in COMBAT_TEMPLATES:
+            for key, template in COMBAT_TEMPLATES[priority].items():
                 if key in trigger_id:
                     return template
 
@@ -287,15 +233,9 @@ During combat, ALWAYS use the shortest possible response:
             url = "wss://api.openai.com/v1/realtime"
             # Get API key dynamically from environment for WebSocket connection
             api_key = self._get_api_key()
-            headers = [
-                ("Authorization", f"Bearer {api_key}"),
-                ("OpenAI-Beta", "realtime=v1")
-            ]
+            headers = [("Authorization", f"Bearer {api_key}"), ("OpenAI-Beta", "realtime=v1")]
 
-            self.ws = await websockets.connect(
-                url,
-                extra_headers=headers
-            )
+            self.ws = await websockets.connect(url, extra_headers=headers)
 
             # Configure session
             session_config = {
@@ -312,9 +252,9 @@ During combat, ALWAYS use the shortest possible response:
                         "type": "server_vad",
                         "threshold": 0.5,
                         "prefix_padding_ms": 300,
-                        "silence_duration_ms": 500
-                    }
-                }
+                        "silence_duration_ms": 500,
+                    },
+                },
             }
 
             await self.ws.send(json.dumps(session_config))
@@ -341,11 +281,7 @@ During combat, ALWAYS use the shortest possible response:
             self.ws = None
             self.ws_connected = False
 
-    async def _send_text_and_receive_audio(
-        self,
-        text: str,
-        priority: int
-    ) -> VoiceResponse:
+    async def _send_text_and_receive_audio(self, text: str, priority: int) -> VoiceResponse:
         """
         Send text and receive audio response via Realtime API.
 
@@ -367,13 +303,8 @@ During combat, ALWAYS use the shortest possible response:
                 "item": {
                     "type": "message",
                     "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": text
-                        }
-                    ]
-                }
+                    "content": [{"type": "input_text", "text": text}],
+                },
             }
 
             await self.ws.send(json.dumps(message))
@@ -383,8 +314,8 @@ During combat, ALWAYS use the shortest possible response:
                 "type": "response.create",
                 "response": {
                     "modalities": ["text", "audio"],
-                    "instructions": "Respond briefly and naturally."
-                }
+                    "instructions": "Respond briefly and naturally.",
+                },
             }
 
             await self.ws.send(json.dumps(response_request))
@@ -426,7 +357,7 @@ During combat, ALWAYS use the shortest possible response:
                 text=response_text or text,
                 audio_data=audio_data,
                 duration_ms=duration_ms,
-                priority=priority
+                priority=priority,
             )
 
         except Exception as e:
@@ -459,17 +390,13 @@ During combat, ALWAYS use the shortest possible response:
             # In Phase 2+, we'll use Realtime API directly
             # Use the existing client instead of creating a new one
             response = await self.client.audio.speech.create(
-                model="tts-1",
-                voice=self.voice,
-                input=text[:MAX_TEXT_LENGTH]
+                model="tts-1", voice=self.voice, input=text[:MAX_TEXT_LENGTH]
             )
 
             audio_data = await response.aread()
 
             return VoiceResponse(
-                text=text,
-                audio_data=audio_data,
-                duration_ms=len(audio_data) // 32
+                text=text, audio_data=audio_data, duration_ms=len(audio_data) // 32
             )
 
         except Exception:
@@ -477,10 +404,7 @@ During combat, ALWAYS use the shortest possible response:
             return VoiceResponse(text=text)
 
     def speak(
-        self,
-        text: str,
-        priority: int = 2,
-        allow_interrupt: bool = True
+        self, text: str, priority: int = 2, allow_interrupt: bool = True
     ) -> VoiceResponse | None:
         """
         Speak text with voice synthesis.
@@ -516,8 +440,7 @@ During combat, ALWAYS use the shortest possible response:
 
             # Run async speech generation
             future = asyncio.run_coroutine_threadsafe(
-                self._generate_speech(text, priority),
-                self.loop
+                self._generate_speech(text, priority), self.loop
             )
             response = future.result(timeout=30.0)
 
@@ -544,10 +467,7 @@ During combat, ALWAYS use the shortest possible response:
         return await self._generate_speech_tts(text)
 
     def speak_with_trigger(
-        self,
-        trigger_info: dict[str, Any],
-        state: dict[str, Any],
-        movement_state: str
+        self, trigger_info: dict[str, Any], state: dict[str, Any], movement_state: str
     ) -> VoiceResponse | None:
         """
         Generate and speak response based on trigger.
@@ -563,7 +483,7 @@ During combat, ALWAYS use the shortest possible response:
         if not self.enabled:
             return None
 
-        priority = trigger_info.get('priority', 2)
+        priority = trigger_info.get("priority", 2)
 
         # Check for short response during combat
         short_response = self._get_short_response(trigger_info, movement_state)
@@ -571,9 +491,9 @@ During combat, ALWAYS use the shortest possible response:
             return self.speak(short_response, priority=priority, allow_interrupt=True)
 
         # Get template based on movement state
-        template = trigger_info.get('template')
+        template = trigger_info.get("template")
         if isinstance(template, dict):
-            text = template.get(movement_state) or template.get('non_combat')
+            text = template.get(movement_state) or template.get("non_combat")
         else:
             text = template
 
@@ -584,22 +504,17 @@ During combat, ALWAYS use the shortest possible response:
         text = self._enhance_template(text, state, movement_state)
 
         # P0 triggers should always be allowed to interrupt
-        allow_interrupt = (priority == 0)
+        allow_interrupt = priority == 0
 
         return self.speak(text, priority=priority, allow_interrupt=allow_interrupt)
 
-    def _enhance_template(
-        self,
-        template: str,
-        state: dict[str, Any],
-        movement_state: str
-    ) -> str:
+    def _enhance_template(self, template: str, state: dict[str, Any], movement_state: str) -> str:
         """Enhance template with state information."""
         # Truncate for combat
         if movement_state == "combat" and len(template) > 50:
             # Extract first sentence
-            sentences = template.split('.')[0]
-            return sentences + "!" if not sentences.endswith('!') else sentences
+            sentences = template.split(".")[0]
+            return sentences + "!" if not sentences.endswith("!") else sentences
 
         return template
 
@@ -610,10 +525,7 @@ During combat, ALWAYS use the shortest possible response:
 
         # Cancel via WebSocket
         if self.loop and self.ws_connected:
-            asyncio.run_coroutine_threadsafe(
-                self._cancel_response(),
-                self.loop
-            )
+            asyncio.run_coroutine_threadsafe(self._cancel_response(), self.loop)
 
     def stop(self) -> None:
         """Stop current speech and clear queue."""
@@ -647,10 +559,7 @@ During combat, ALWAYS use the shortest possible response:
         self.stop()
 
         if self.loop and self.ws_connected:
-            asyncio.run_coroutine_threadsafe(
-                self._disconnect_realtime_api(),
-                self.loop
-            )
+            asyncio.run_coroutine_threadsafe(self._disconnect_realtime_api(), self.loop)
 
         if self.loop:
             self.loop.call_soon_threadsafe(self.loop.stop)
@@ -671,7 +580,7 @@ def create_voice_client(
     api_key: str | None = None,
     voice: str = "alloy",
     enable_audio: bool = True,
-    use_realtime: bool = True
+    use_realtime: bool = True,
 ) -> RealtimeVoiceClient:
     """
     Create a Realtime Voice client with sensible defaults.
@@ -691,5 +600,5 @@ def create_voice_client(
         enable_audio_output=enable_audio,
         use_realtime_api=use_realtime,
         cooldown_ms=3000,
-        max_response_length_ms=10000
+        max_response_length_ms=10000,
     )

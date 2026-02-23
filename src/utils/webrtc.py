@@ -9,17 +9,16 @@ import secrets
 import time
 from typing import Any
 
-import numpy as np
+from utils.dependencies import AIORTC_AVAILABLE, NUMPY_AVAILABLE
+
+if NUMPY_AVAILABLE:
+    import numpy as np
 
 logger = logging.getLogger(__name__)
 
 # Import constants with fallback for standalone usage
 try:
-    from constants import (
-        MAX_STATE_BUFFER_SIZE,
-        WEBRTC_DEFAULT_PORT,
-        WEBRTC_TOKEN_EXPIRY_SECONDS,
-    )
+    from constants import MAX_STATE_BUFFER_SIZE, WEBRTC_DEFAULT_PORT, WEBRTC_TOKEN_EXPIRY_SECONDS
 except ImportError:
     MAX_STATE_BUFFER_SIZE = 100
     WEBRTC_DEFAULT_PORT = 8080
@@ -27,11 +26,8 @@ except ImportError:
 
 
 # Try to import aiortc
-try:
+if AIORTC_AVAILABLE:
     import aiortc
-    AIORTC_AVAILABLE = True
-except ImportError:
-    AIORTC_AVAILABLE = False
 
 
 class WebRTCStreamer:
@@ -41,11 +37,7 @@ class WebRTCStreamer:
     Supports low-latency streaming of game state and ROI regions.
     """
 
-    def __init__(
-        self,
-        stun_servers: list | None = None,
-        port_range: tuple = (10000, 20000)
-    ):
+    def __init__(self, stun_servers: list | None = None, port_range: tuple = (10000, 20000)):
         """
         Initialize WebRTC streamer.
 
@@ -57,9 +49,7 @@ class WebRTCStreamer:
             logger.warning("aiortc library not available. Running in mock mode.")
             logger.info("Install with: pip install aiortc")
 
-        self.stun_servers = stun_servers or [
-            "stun:stun.l.google.com:19302"
-        ]
+        self.stun_servers = stun_servers or ["stun:stun.l.google.com:19302"]
         self.port_range = port_range
 
         # WebRTC components
@@ -89,12 +79,12 @@ class WebRTCStreamer:
             self.pc = aiortc.RTCPeerConnection()
 
             # Configure STUN servers
-            self.pc.set_configuration({
-                "iceServers": [
-                    {"urls": self.stun_servers}
-                ],
-                "iceTransportPolicy": "all",
-            })
+            self.pc.set_configuration(
+                {
+                    "iceServers": [{"urls": self.stun_servers}],
+                    "iceTransportPolicy": "all",
+                }
+            )
 
             return self.pc
         else:
@@ -106,10 +96,7 @@ class WebRTCStreamer:
             self.pc = MockPeerConnection()
             return self.pc
 
-    async def create_data_channel(
-        self,
-        channel_name: str = "state"
-    ):
+    async def create_data_channel(self, channel_name: str = "state"):
         """
         Create RTC data channel for State JSON.
 
@@ -189,11 +176,7 @@ class WebRTCStreamer:
 
         try:
             # Add timestamp
-            state_with_ts = {
-                **state,
-                "timestamp": int(time.time() * 1000),
-                "type": "state"
-            }
+            state_with_ts = {**state, "timestamp": int(time.time() * 1000), "type": "state"}
 
             # Serialize to JSON
             message = json.dumps(state_with_ts)
@@ -219,10 +202,7 @@ class WebRTCStreamer:
             logger.error(f"Failed to send state: {e}")
             return False
 
-    async def send_video_frame(
-        self,
-        frame: np.ndarray
-    ) -> bool:
+    async def send_video_frame(self, frame: np.ndarray) -> bool:
         """
         Send video frame through WebRTC.
 
@@ -255,7 +235,8 @@ class WebRTCStreamer:
         """
         avg_latency = (
             sum(self._latency_samples) / len(self._latency_samples)
-            if self._latency_samples else 0.0
+            if self._latency_samples
+            else 0.0
         )
 
         return {
@@ -307,10 +288,7 @@ class WebRTCSignalingServer:
     TOKEN_EXPIRY_SECONDS = WEBRTC_TOKEN_EXPIRY_SECONDS
 
     def __init__(
-        self,
-        host: str = "0.0.0.0",
-        port: int = WEBRTC_DEFAULT_PORT,
-        secret_key: str | None = None
+        self, host: str = "0.0.0.0", port: int = WEBRTC_DEFAULT_PORT, secret_key: str | None = None
     ):
         """
         Initialize signaling server.
@@ -353,9 +331,7 @@ class WebRTCSignalingServer:
 
         # Sign with HMAC
         signature = hmac.new(
-            self._secret_key.encode(),
-            payload.encode(),
-            hashlib.sha256
+            self._secret_key.encode(), payload.encode(), hashlib.sha256
         ).hexdigest()
 
         return f"{payload}:{signature}"
@@ -388,9 +364,7 @@ class WebRTCSignalingServer:
             # Verify signature
             payload = f"{client_id}:{expiry_str}"
             expected_signature = hmac.new(
-                self._secret_key.encode(),
-                payload.encode(),
-                hashlib.sha256
+                self._secret_key.encode(), payload.encode(), hashlib.sha256
             ).hexdigest()
 
             if not hmac.compare_digest(signature, expected_signature):
