@@ -180,17 +180,37 @@ class TestPydanticFallback:
         """Test that Field is always available."""
         assert Field is not None
 
-    def test_basemodel_can_be_instantiated(self) -> None:
-        """Test that BaseModel can be instantiated."""
+    @pytest.mark.skipif(PYDANTIC_AVAILABLE, reason="Only applies when pydantic is not installed")
+    def test_fallback_basemodel_can_be_instantiated(self) -> None:
+        """Test that fallback BaseModel can be instantiated."""
         model = BaseModel(test_field="value")
         assert model.test_field == "value"  # type: ignore[attr-defined]
 
-    def test_field_returns_default(self) -> None:
-        """Test that Field returns the default value."""
+    @pytest.mark.skipif(PYDANTIC_AVAILABLE, reason="Only applies when pydantic is not installed")
+    def test_fallback_field_returns_default(self) -> None:
+        """Test that fallback Field returns the default value."""
         result = Field(default="test_default")
         assert result == "test_default"
 
-    def test_field_with_no_default(self) -> None:
-        """Test Field with no default returns None."""
+    @pytest.mark.skipif(PYDANTIC_AVAILABLE, reason="Only applies when pydantic is not installed")
+    def test_fallback_field_with_no_default(self) -> None:
+        """Test fallback Field with no default returns None."""
         result = Field()
         assert result is None
+
+    @pytest.mark.skipif(not PYDANTIC_AVAILABLE, reason="Only applies when pydantic is installed")
+    def test_pydantic_field_returns_field_info(self) -> None:
+        """Test that pydantic Field returns FieldInfo."""
+        result = Field(default="test_default")
+        # Pydantic Field returns FieldInfo object, not the value directly
+        assert hasattr(result, "default")
+
+    @pytest.mark.skipif(not PYDANTIC_AVAILABLE, reason="Only applies when pydantic is installed")
+    def test_pydantic_basemodel_subclass_works(self) -> None:
+        """Test that pydantic BaseModel subclass can be created."""
+
+        class TestModel(BaseModel):
+            test_field: str = Field(default="value")
+
+        model = TestModel()
+        assert model.test_field == "value"
