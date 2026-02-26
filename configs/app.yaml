@@ -1,0 +1,42 @@
+# Application settings
+app:
+  log_level: INFO
+  output_dir: ./logs
+  debug_mode: false
+
+# Audio capture settings
+audio:
+  sample_rate: 16000
+  channels: 1
+  chunk_size: 512
+  noise_gate_threshold: 0.01
+  noise_gate_attack_ms: 5.0
+  noise_gate_release_ms: 50.0
+  vad_enabled: true
+  vad_padding_ms: 300
+  vad_min_speech_ms: 500
+  vad_max_speech_ms: 10000
+  device_index: null
+
+# Capture settings
+capture:
+  type: video  # "video" or "screen"
+  video_path: null
+  loop_video: false
+  monitor_index: 1
+  region: null  # [x, y, width, height]
+
+# Trigger settings
+trigger:
+  config_path: ./configs/triggers.yaml
+  cooldown_ms: 5000
+  max_response_length_ms: 10000
+
+# LLM settings
+llm:
+  model: gpt-4o-realtime-preview-2024-12-17
+  voice: alloy
+  use_realtime_api: true
+  max_tokens: 500
+  temperature: 0.7
+  system_prompt_path: ./configs/prompts/system.txt

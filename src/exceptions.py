@@ -2,6 +2,66 @@
 
 Provides a hierarchy of exceptions for proper error handling
 and differentiation of error types.
+
+Exception Hierarchy:
+====================
+
+    GameStudyError (base - GS000)
+    |
+    |-- Domain Layer (src/domain/exceptions.py)
+    |   |-- DomainError (DOM000)
+    |       |-- InvalidValueError (DOM001)
+    |       |-- StateTransitionError (DOM002)
+    |       |-- ValidationError (DOM003)
+    |       |-- EntityNotFoundError (DOM004)
+    |       |-- BusinessRuleViolationError (DOM005)
+    |       |-- TriggerEvaluationError (DOM006)
+    |
+    |-- Application Layer (src/application/exceptions.py)
+    |   |-- ApplicationError (APP000)
+    |       |-- UseCaseError (APP001)
+    |       |-- PortError (APP002)
+    |       |-- ConfigurationError (APP003)
+    |       |-- DTOParseError (APP004)
+    |       |-- ServiceError (APP005)
+    |       |-- OrchestrationError (APP006)
+    |
+    |-- Infrastructure Layer (src/infrastructure/exceptions.py)
+    |   |-- InfrastructureError (INF000)
+    |       |-- ConnectionError (INF001)
+    |       |-- CaptureError (INF002)
+    |       |-- AudioError (INF003)
+    |       |-- DeviceNotFoundError (INF004)
+    |       |-- LLMError (INF005)
+    |       |-- TTSError (INF006)
+    |       |-- OCRError (INF007)
+    |       |-- VisionError (INF008)
+    |       |-- ConfigurationLoadError (INF009)
+    |       |-- ResourceExhaustedError (INF010)
+    |
+    |-- Presentation Layer (src/presentation/exceptions.py)
+    |   |-- PresentationError (PRES000)
+    |       |-- CLIError (PRES001)
+    |       |-- OutputFormatError (PRES002)
+    |       |-- UserInputError (PRES003)
+    |       |-- DisplayError (PRES004)
+    |       |-- FormatterError (PRES005)
+    |
+    |-- Legacy/Generic (this file)
+        |-- VisionError (GS100)
+        |-- TriggerError (GS200)
+        |-- DialogueError (GS300)
+        |-- CaptureError (GS400)
+        |-- WebRTCError (GS500)
+        |-- WebSocketError (GS600)
+        |-- ConfigError (GS700)
+        |-- ModelLoadError (GS800)
+        |-- DiagnosticsError (GS900)
+
+Usage Guidelines:
+- Use layer-specific exceptions from their respective modules for new code
+- This file provides backward compatibility and generic exceptions
+- All exceptions inherit from GameStudyError for consistent handling
 """
 
 import logging

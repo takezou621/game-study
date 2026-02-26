@@ -1,0 +1,20 @@
+# Capture-specific configuration
+
+video:
+  # Default video capture settings
+  loop: false
+  resize:
+    enabled: false
+    width: 1920
+    height: 1080
+
+screen:
+  # Default screen capture settings
+  monitor_index: 1
+  fps_target: 30
+
+  # Region capture (null for full screen)
+  region: null  # [x, y, width, height]
+
+  # Performance settings
+  compression: false
