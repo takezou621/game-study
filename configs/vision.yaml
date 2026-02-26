@@ -1,0 +1,25 @@
+# Vision module configuration
+
+vision:
+  # OCR settings
+  ocr:
+    use_template_matching: true
+    min_confidence: 0.7
+
+  # YOLO detector settings
+  yolo:
+    # Model path (null = use yolov8n.pt auto-download)
+    model_path: null
+    # Confidence threshold for detections
+    confidence_threshold: 0.5
+    # IoU threshold for NMS
+    iou_threshold: 0.45
+    # Enable YOLO detector
+    enabled: true
+
+  # Anchor detection settings
+  anchors:
+    enabled: true
+    # Default resolution for calibration
+    default_width: 1920
+    default_height: 1080
