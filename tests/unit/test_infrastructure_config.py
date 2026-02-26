@@ -1,9 +1,5 @@
 """Tests for infrastructure configuration: settings loading."""
 
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 import yaml
@@ -15,6 +11,7 @@ class TestEnvironment:
     def test_environment_values(self):
         """Test Environment enum values."""
         from src.infrastructure.config.settings import Environment
+
         assert Environment.DEVELOPMENT.value == "development"
         assert Environment.TESTING.value == "testing"
         assert Environment.PRODUCTION.value == "production"
@@ -26,6 +23,7 @@ class TestFeatureFlags:
     def test_init_defaults(self):
         """Test FeatureFlags initialization with defaults."""
         from src.infrastructure.config.settings import FeatureFlags
+
         flags = FeatureFlags()
         assert flags.enable_audio_capture is True
         assert flags.enable_screen_capture is True
@@ -39,6 +37,7 @@ class TestFeatureFlags:
     def test_init_with_values(self):
         """Test FeatureFlags initialization with values."""
         from src.infrastructure.config.settings import FeatureFlags
+
         flags = FeatureFlags(
             enable_audio_capture=False,
             enable_debug_logging=True,
@@ -53,6 +52,7 @@ class TestAppSettings:
     def test_init_defaults(self):
         """Test AppSettings initialization with defaults."""
         from src.infrastructure.config.settings import AppSettings, Environment
+
         settings = AppSettings()
         assert settings.log_level == "INFO"
         assert settings.output_dir == "./logs"
@@ -62,6 +62,7 @@ class TestAppSettings:
     def test_init_with_values(self):
         """Test AppSettings initialization with values."""
         from src.infrastructure.config.settings import AppSettings, Environment
+
         settings = AppSettings(
             log_level="DEBUG",
             output_dir="/var/log/app",
@@ -76,6 +77,7 @@ class TestAppSettings:
     def test_model_dump(self):
         """Test model_dump method."""
         from src.infrastructure.config.settings import AppSettings
+
         settings = AppSettings(log_level="WARNING", debug_mode=True)
         result = settings.model_dump()
         assert result["log_level"] == "WARNING"
@@ -84,6 +86,7 @@ class TestAppSettings:
     def test_expand_user_output_dir(self):
         """Test output_dir expands user home directory."""
         from src.infrastructure.config.settings import AppSettings
+
         settings = AppSettings(output_dir="~/logs")
         assert "~" not in settings.output_dir
 
@@ -94,6 +97,7 @@ class TestAudioSettings:
     def test_init_defaults(self):
         """Test AudioSettings initialization with defaults."""
         from src.infrastructure.config.settings import AudioSettings
+
         settings = AudioSettings()
         assert settings.sample_rate == 16000
         assert settings.channels == 1
@@ -105,6 +109,7 @@ class TestAudioSettings:
     def test_init_with_values(self):
         """Test AudioSettings initialization with values."""
         from src.infrastructure.config.settings import AudioSettings
+
         settings = AudioSettings(
             sample_rate=48000,
             channels=2,
@@ -119,6 +124,7 @@ class TestAudioSettings:
     def test_model_dump(self):
         """Test model_dump method."""
         from src.infrastructure.config.settings import AudioSettings
+
         settings = AudioSettings(sample_rate=44100)
         result = settings.model_dump()
         assert result["sample_rate"] == 44100
@@ -127,8 +133,10 @@ class TestAudioSettings:
 
     def test_vad_timing_validation(self):
         """Test VAD timing validation."""
-        from src.infrastructure.config.settings import AudioSettings
         from pydantic import ValidationError
+
+        from src.infrastructure.config.settings import AudioSettings
+
         with pytest.raises(ValidationError):
             AudioSettings(
                 vad_min_speech_ms=5000,
@@ -142,6 +150,7 @@ class TestCaptureSettings:
     def test_init_defaults(self):
         """Test CaptureSettings initialization with defaults."""
         from src.infrastructure.config.settings import CaptureSettings
+
         settings = CaptureSettings()
         assert settings.type == "video"
         assert settings.video_path is None
@@ -152,6 +161,7 @@ class TestCaptureSettings:
     def test_init_with_values(self):
         """Test CaptureSettings initialization with values."""
         from src.infrastructure.config.settings import CaptureSettings
+
         settings = CaptureSettings(
             type="screen",
             video_path="/path/to/video.mp4",
@@ -168,6 +178,7 @@ class TestCaptureSettings:
     def test_model_dump(self):
         """Test model_dump method."""
         from src.infrastructure.config.settings import CaptureSettings
+
         settings = CaptureSettings(
             type="screen",
             monitor_index=2,
@@ -181,13 +192,16 @@ class TestCaptureSettings:
     def test_region_from_list(self):
         """Test region conversion from list."""
         from src.infrastructure.config.settings import CaptureSettings
+
         settings = CaptureSettings(region=[0, 0, 1280, 720])
         assert settings.region == (0, 0, 1280, 720)
 
     def test_region_negative_raises(self):
         """Test region with negative values raises error."""
-        from src.infrastructure.config.settings import CaptureSettings
         from pydantic import ValidationError
+
+        from src.infrastructure.config.settings import CaptureSettings
+
         with pytest.raises(ValidationError):
             CaptureSettings(region=(-1, 0, 100, 100))
 
@@ -198,6 +212,7 @@ class TestTriggerSettings:
     def test_init_defaults(self):
         """Test TriggerSettings initialization with defaults."""
         from src.infrastructure.config.settings import TriggerSettings
+
         settings = TriggerSettings()
         assert settings.config_path == "./configs/triggers.yaml"
         assert settings.cooldown_ms == 5000
@@ -206,6 +221,7 @@ class TestTriggerSettings:
     def test_init_with_values(self):
         """Test TriggerSettings initialization with values."""
         from src.infrastructure.config.settings import TriggerSettings
+
         settings = TriggerSettings(
             config_path="/custom/triggers.yaml",
             cooldown_ms=3000,
@@ -218,6 +234,7 @@ class TestTriggerSettings:
     def test_model_dump(self):
         """Test model_dump method."""
         from src.infrastructure.config.settings import TriggerSettings
+
         settings = TriggerSettings(cooldown_ms=2000)
         result = settings.model_dump()
         assert result["cooldown_ms"] == 2000
@@ -229,6 +246,7 @@ class TestLLMSettings:
     def test_init_defaults(self):
         """Test LLMSettings initialization with defaults."""
         from src.infrastructure.config.settings import LLMSettings
+
         settings = LLMSettings()
         assert settings.api_key is None
         assert settings.model == "gpt-4o"
@@ -239,8 +257,10 @@ class TestLLMSettings:
 
     def test_init_with_values(self):
         """Test LLMSettings initialization with values."""
-        from src.infrastructure.config.settings import LLMSettings
         from pydantic import SecretStr
+
+        from src.infrastructure.config.settings import LLMSettings
+
         settings = LLMSettings(
             api_key=SecretStr("test-key"),
             model="gpt-4-turbo",
@@ -256,8 +276,10 @@ class TestLLMSettings:
 
     def test_model_dump_safe_excludes_api_key(self):
         """Test model_dump_safe masks api_key for security."""
-        from src.infrastructure.config.settings import LLMSettings
         from pydantic import SecretStr
+
+        from src.infrastructure.config.settings import LLMSettings
+
         settings = LLMSettings(api_key=SecretStr("secret-key"))
         result = settings.model_dump_safe()
         assert result["api_key"] == "***REDACTED***"
@@ -265,6 +287,7 @@ class TestLLMSettings:
     def test_get_api_key_none(self):
         """Test get_api_key returns None when not set."""
         from src.infrastructure.config.settings import LLMSettings
+
         settings = LLMSettings()
         assert settings.get_api_key() is None
 
@@ -274,8 +297,16 @@ class TestSettings:
 
     def test_init_defaults(self):
         """Test Settings initialization with defaults."""
-        from src.infrastructure.config.settings import Settings
-        from src.infrastructure.config.settings import AppSettings, AudioSettings, CaptureSettings, TriggerSettings, LLMSettings, FeatureFlags
+        from src.infrastructure.config.settings import (
+            AppSettings,
+            AudioSettings,
+            CaptureSettings,
+            FeatureFlags,
+            LLMSettings,
+            Settings,
+            TriggerSettings,
+        )
+
         settings = Settings()
         assert isinstance(settings.app, AppSettings)
         assert isinstance(settings.audio, AudioSettings)
@@ -286,7 +317,8 @@ class TestSettings:
 
     def test_init_with_values(self):
         """Test Settings initialization with values."""
-        from src.infrastructure.config.settings import Settings, AppSettings, AudioSettings
+        from src.infrastructure.config.settings import AppSettings, AudioSettings, Settings
+
         settings = Settings(
             app=AppSettings(log_level="DEBUG"),
             audio=AudioSettings(sample_rate=48000),
@@ -296,7 +328,8 @@ class TestSettings:
 
     def test_model_dump(self):
         """Test model_dump method."""
-        from src.infrastructure.config.settings import Settings, AppSettings, AudioSettings
+        from src.infrastructure.config.settings import AppSettings, AudioSettings, Settings
+
         settings = Settings(
             app=AppSettings(log_level="DEBUG"),
             audio=AudioSettings(sample_rate=44100),
@@ -313,6 +346,7 @@ class TestSettings:
     def test_model_validate(self):
         """Test model_validate method."""
         from src.infrastructure.config.settings import Settings
+
         data = {
             "app": {"log_level": "WARNING"},
             "audio": {"sample_rate": 48000, "channels": 2},
@@ -330,7 +364,8 @@ class TestLoadSettings:
 
     def test_load_settings_from_path(self, tmp_path, monkeypatch):
         """Test load_settings from specific path."""
-        from src.infrastructure.config.settings import load_settings, clear_settings_cache
+        from src.infrastructure.config.settings import clear_settings_cache, load_settings
+
         clear_settings_cache()
         # Set environment to testing to avoid preset overrides
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "testing")
@@ -348,7 +383,8 @@ class TestLoadSettings:
 
     def test_load_settings_empty_file(self, tmp_path, monkeypatch):
         """Test load_settings handles empty file."""
-        from src.infrastructure.config.settings import load_settings, clear_settings_cache
+        from src.infrastructure.config.settings import clear_settings_cache, load_settings
+
         clear_settings_cache()
         # Set environment to testing
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "testing")
@@ -366,7 +402,12 @@ class TestSaveSettings:
 
     def test_save_settings_creates_file(self, tmp_path, monkeypatch):
         """Test save_settings creates file."""
-        from src.infrastructure.config.settings import Settings, save_settings, clear_settings_cache, Environment
+        from src.infrastructure.config.settings import (
+            Settings,
+            clear_settings_cache,
+            save_settings,
+        )
+
         clear_settings_cache()
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "testing")
 
@@ -380,6 +421,7 @@ class TestSaveSettings:
     def test_save_settings_creates_parent_dirs(self, tmp_path):
         """Test save_settings creates parent directories."""
         from src.infrastructure.config.settings import Settings, save_settings
+
         settings = Settings()
         config_path = tmp_path / "nested" / "deep" / "config.yaml"
         save_settings(settings, str(config_path))
@@ -389,8 +431,10 @@ class TestSaveSettings:
 
     def test_save_settings_excludes_secrets_by_default(self, tmp_path):
         """Test save_settings does not save secrets by default."""
-        from src.infrastructure.config.settings import Settings, LLMSettings, save_settings
         from pydantic import SecretStr
+
+        from src.infrastructure.config.settings import LLMSettings, Settings, save_settings
+
         settings = Settings(
             llm=LLMSettings(api_key=SecretStr("secret-key"), model="gpt-4"),
         )
@@ -409,14 +453,20 @@ class TestSettingsHelperFunctions:
 
     def test_clear_settings_cache(self):
         """Test clear_settings_cache function."""
-        from src.infrastructure.config.settings import clear_settings_cache, _settings_cache
+        from src.infrastructure.config.settings import clear_settings_cache
+
         clear_settings_cache()
         # Just verify it doesn't raise
         assert True
 
     def test_get_feature_flags(self, monkeypatch):
         """Test get_feature_flags function."""
-        from src.infrastructure.config.settings import get_feature_flags, clear_settings_cache, FeatureFlags
+        from src.infrastructure.config.settings import (
+            FeatureFlags,
+            clear_settings_cache,
+            get_feature_flags,
+        )
+
         clear_settings_cache()
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "testing")
 
@@ -425,7 +475,8 @@ class TestSettingsHelperFunctions:
 
     def test_is_feature_enabled(self, monkeypatch):
         """Test is_feature_enabled function."""
-        from src.infrastructure.config.settings import is_feature_enabled, clear_settings_cache
+        from src.infrastructure.config.settings import clear_settings_cache, is_feature_enabled
+
         clear_settings_cache()
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "testing")
 
@@ -437,7 +488,11 @@ class TestEnvironmentPresets:
 
     def test_development_preset(self, tmp_path, monkeypatch):
         """Test development environment preset."""
-        from src.infrastructure.config.settings import load_settings, Environment, clear_settings_cache
+        from src.infrastructure.config.settings import (
+            clear_settings_cache,
+            load_settings,
+        )
+
         clear_settings_cache()
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "development")
 
@@ -451,7 +506,8 @@ class TestEnvironmentPresets:
 
     def test_production_preset(self, tmp_path, monkeypatch):
         """Test production environment preset."""
-        from src.infrastructure.config.settings import load_settings, clear_settings_cache
+        from src.infrastructure.config.settings import clear_settings_cache, load_settings
+
         clear_settings_cache()
         monkeypatch.setenv("GAMECOACH_APP_ENVIRONMENT", "production")
 

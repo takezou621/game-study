@@ -112,9 +112,7 @@ class AudioCapture:
                 try:
                     from audio.vad import VoiceActivityDetector
 
-                    self._vad = VoiceActivityDetector(
-                        sample_rate=self.config.sample_rate
-                    )
+                    self._vad = VoiceActivityDetector(sample_rate=self.config.sample_rate)
                     if not self._vad.initialize():
                         logger.warning("VAD initialization failed, continuing without VAD")
                         self._vad_enabled = False

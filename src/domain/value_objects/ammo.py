@@ -25,7 +25,7 @@ class Ammo:
         if self.value < 0:
             logger.warning(
                 "Invalid ammo value: negative value provided",
-                extra={"value": self.value, "max_value": self.max_value}
+                extra={"value": self.value, "max_value": self.max_value},
             )
             raise InvalidValueError(
                 message=f"Ammo cannot be negative, got {self.value}",
@@ -37,7 +37,7 @@ class Ammo:
         if self.max_value is not None and self.value > self.max_value:
             logger.warning(
                 "Invalid ammo value: exceeds max",
-                extra={"value": self.value, "max_value": self.max_value}
+                extra={"value": self.value, "max_value": self.max_value},
             )
             raise InvalidValueError(
                 message=f"Ammo cannot exceed max ({self.max_value}), got {self.value}",

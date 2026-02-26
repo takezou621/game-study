@@ -362,14 +362,22 @@ class GameState:
                     phase=extract_value(storm_data.get("phase", {}), "value"),
                     damage=extract_value(storm_data.get("damage", {}), "value"),
                     in_storm=extract_value(storm_data.get("in_storm", {}), "value") or False,
-                    is_shrinking=extract_value(storm_data.get("is_shrinking", {}), "value") or False,
-                    next_circle_distance=extract_value(storm_data.get("next_circle_distance", {}), "value"),
+                    is_shrinking=extract_value(storm_data.get("is_shrinking", {}), "value")
+                    or False,
+                    next_circle_distance=extract_value(
+                        storm_data.get("next_circle_distance", {}), "value"
+                    ),
                 ),
             ),
-            session=Session.from_dict({
-                "phase": extract_value(session_data.get("phase", {}), "value"),
-                "inactivity_duration_ms": extract_value(session_data.get("inactivity_duration_ms", {}), "value") or 0,
-            }),
+            session=Session.from_dict(
+                {
+                    "phase": extract_value(session_data.get("phase", {}), "value"),
+                    "inactivity_duration_ms": extract_value(
+                        session_data.get("inactivity_duration_ms", {}), "value"
+                    )
+                    or 0,
+                }
+            ),
             updated_at_ms=get_timestamp_ms(),
         )
 

@@ -53,44 +53,54 @@ class JsonFormatter:
         Returns:
             JSON string
         """
-        return self.format({
-            "type": event_type,
-            "timestamp": datetime.now().isoformat(),
-            "data": data,
-        })
+        return self.format(
+            {
+                "type": event_type,
+                "timestamp": datetime.now().isoformat(),
+                "data": data,
+            }
+        )
 
     def format_state(self, state: dict[str, Any]) -> str:
         """Format game state."""
-        return self.format({
-            "type": "state",
-            "timestamp": datetime.now().isoformat(),
-            "state": state,
-        })
+        return self.format(
+            {
+                "type": "state",
+                "timestamp": datetime.now().isoformat(),
+                "state": state,
+            }
+        )
 
     def format_trigger(self, trigger_id: str, trigger_name: str, template: str) -> str:
         """Format trigger event."""
-        return self.format({
-            "type": "trigger",
-            "timestamp": datetime.now().isoformat(),
-            "trigger_id": trigger_id,
-            "trigger_name": trigger_name,
-            "template": template,
-        })
+        return self.format(
+            {
+                "type": "trigger",
+                "timestamp": datetime.now().isoformat(),
+                "trigger_id": trigger_id,
+                "trigger_name": trigger_name,
+                "template": template,
+            }
+        )
 
     def format_response(self, text: str, duration_ms: int | None = None) -> str:
         """Format voice response."""
-        return self.format({
-            "type": "response",
-            "timestamp": datetime.now().isoformat(),
-            "text": text,
-            "duration_ms": duration_ms,
-        })
+        return self.format(
+            {
+                "type": "response",
+                "timestamp": datetime.now().isoformat(),
+                "text": text,
+                "duration_ms": duration_ms,
+            }
+        )
 
     def format_error(self, message: str, details: dict[str, Any] | None = None) -> str:
         """Format error message."""
-        return self.format({
-            "type": "error",
-            "timestamp": datetime.now().isoformat(),
-            "message": message,
-            "details": details,
-        })
+        return self.format(
+            {
+                "type": "error",
+                "timestamp": datetime.now().isoformat(),
+                "message": message,
+                "details": details,
+            }
+        )

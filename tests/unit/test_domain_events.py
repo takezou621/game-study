@@ -2,9 +2,6 @@
 
 import importlib.util
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 # Direct module imports to avoid package __init__.py dependencies
 SRC_PATH = Path(__file__).parent.parent.parent / "src"

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from infrastructure.exceptions import AudioError, DeviceNotFoundError
+from infrastructure.exceptions import DeviceNotFoundError
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -134,8 +134,7 @@ def validate_device(device_index: int | None, config: Any) -> int:
         # Device not found
         available = [d.index for d in devices]
         logger.error(
-            f"Audio device {device_index} not found",
-            extra={"available_devices": available}
+            f"Audio device {device_index} not found", extra={"available_devices": available}
         )
         raise DeviceNotFoundError(
             device_type="audio",

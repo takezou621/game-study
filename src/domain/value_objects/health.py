@@ -25,7 +25,7 @@ class HP:
         if not 0 <= self.value <= self.max_value:
             logger.warning(
                 "Invalid HP value: out of range",
-                extra={"value": self.value, "max_value": self.max_value}
+                extra={"value": self.value, "max_value": self.max_value},
             )
             raise InvalidValueError(
                 message=f"HP must be between 0 and {self.max_value}, got {self.value}",
@@ -78,7 +78,7 @@ class Shield:
         if not 0 <= self.value <= self.max_value:
             logger.warning(
                 "Invalid Shield value: out of range",
-                extra={"value": self.value, "max_value": self.max_value}
+                extra={"value": self.value, "max_value": self.max_value},
             )
             raise InvalidValueError(
                 message=f"Shield must be between 0 and {self.max_value}, got {self.value}",

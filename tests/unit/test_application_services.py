@@ -2,7 +2,6 @@
 
 import importlib.util
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -208,7 +207,9 @@ class TestGameAnalyzerService:
             world=WorldInfo(storm=StormInfo(in_storm=True, damage=2.0)),
         )
         analysis = service.analyze(state)
-        assert any("storm" in r.lower() or "safe zone" in r.lower() for r in analysis.recommendations)
+        assert any(
+            "storm" in r.lower() or "safe zone" in r.lower() for r in analysis.recommendations
+        )
 
     def test_analyze_recommendations_heavy_storm(self, service: GameAnalyzerService):
         """Test analyze generates heavy storm recommendation."""
@@ -252,7 +253,9 @@ class TestGameAnalyzerService:
             ),
         )
         analysis = service.analyze(state)
-        assert any("out of ammo" in r.lower() or "switch" in r.lower() for r in analysis.recommendations)
+        assert any(
+            "out of ammo" in r.lower() or "switch" in r.lower() for r in analysis.recommendations
+        )
 
     def test_analyze_recommendations_low_materials(self, service: GameAnalyzerService):
         """Test analyze generates farm materials recommendation."""
@@ -260,7 +263,9 @@ class TestGameAnalyzerService:
             player=Player(inventory=InventoryInfo(materials=50)),
         )
         analysis = service.analyze(state)
-        assert any("farm" in r.lower() or "materials" in r.lower() for r in analysis.recommendations)
+        assert any(
+            "farm" in r.lower() or "materials" in r.lower() for r in analysis.recommendations
+        )
 
     def test_analyze_key_metrics(self, service: GameAnalyzerService, healthy_state: GameState):
         """Test analyze extracts key metrics."""
@@ -282,7 +287,9 @@ class TestGameAnalyzerService:
         )
         assert service.get_movement_state(state) == "combat"
 
-    def test_get_movement_state_non_combat(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_get_movement_state_non_combat(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test get_movement_state returns non_combat for healthy state."""
         assert service.get_movement_state(healthy_state) == "non_combat"
 
@@ -296,14 +303,18 @@ class TestGameAnalyzerService:
         assert changes["hp"]["diff"] == -25
         assert changes["hp"]["is_damage"] is True
 
-    def test_compare_states_shield_change(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_compare_states_shield_change(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test compare_states detects shield change."""
         current = healthy_state.with_shield(50)
         changes = service.compare_states(healthy_state, current)
         assert "shield" in changes
         assert changes["shield"]["diff"] == -50
 
-    def test_compare_states_knocked_change(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_compare_states_knocked_change(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test compare_states detects knocked change."""
         current = healthy_state.with_knocked(True)
         changes = service.compare_states(healthy_state, current)
@@ -311,7 +322,9 @@ class TestGameAnalyzerService:
         assert changes["knocked"]["old"] is False
         assert changes["knocked"]["new"] is True
 
-    def test_compare_states_storm_change(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_compare_states_storm_change(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test compare_states detects storm change."""
         current = healthy_state.with_storm(in_storm=True)
         changes = service.compare_states(healthy_state, current)
@@ -324,11 +337,14 @@ class TestGameAnalyzerService:
         changes = service.compare_states(healthy_state, healthy_state)
         assert changes == {}
 
-    def test_should_suppress_response_recent_response(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_should_suppress_response_recent_response(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test should_suppress_response returns True for recent response."""
         # Get current time and use it as last_response to simulate very recent response
         # With elapsed time = 0 and min_interval > 0, should suppress
         from utils.time import get_timestamp_ms
+
         now = get_timestamp_ms()
         result = service.should_suppress_response(
             healthy_state,
@@ -337,7 +353,9 @@ class TestGameAnalyzerService:
         )
         assert result is True
 
-    def test_should_suppress_response_enough_time(self, service: GameAnalyzerService, healthy_state: GameState):
+    def test_should_suppress_response_enough_time(
+        self, service: GameAnalyzerService, healthy_state: GameState
+    ):
         """Test should_suppress_response returns False after enough time."""
         # Use 0 as last_response_ms (very old), and small min_interval
         result = service.should_suppress_response(
@@ -439,7 +457,7 @@ class TestVoiceCoachService:
     def test_clear_queue_with_items(self, service: VoiceCoachService):
         """Test clear_queue with items."""
         # Add mock items to queue
-        from application.dto.response_dto import QueuedResponseDTO, AudioResponseDTO
+        from application.dto.response_dto import AudioResponseDTO, QueuedResponseDTO
 
         mock_response = AudioResponseDTO(text="test", priority=0)
         service.response_queue = [
@@ -526,7 +544,9 @@ class TestVoiceCoachService:
 
         # Fill queue
         service.response_queue = [
-            QueuedResponseDTO(response=AudioResponseDTO(text=f"test{i}", priority=0), queue_position=i)
+            QueuedResponseDTO(
+                response=AudioResponseDTO(text=f"test{i}", priority=0), queue_position=i
+            )
             for i in range(service.max_queue_size)
         ]
 

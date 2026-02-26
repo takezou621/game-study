@@ -7,7 +7,6 @@ These tests verify that modules work together correctly across layers:
 - Exception chaining works across layers
 """
 
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -18,20 +17,13 @@ import yaml
 # Ensure src is in path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from application.exceptions import (
-    ApplicationError,
-    ConfigurationError,
-    ServiceError,
-    UseCaseError,
-)
+from application.exceptions import ConfigurationError, ServiceError, UseCaseError
 from application.services.game_analyzer import GameAnalysis, GameAnalyzerService
 from domain.entities.game_state import GameState, InventoryInfo, Player, WeaponInfo, WorldInfo
 from domain.entities.player import PlayerStatus
 from domain.entities.session import Session, SessionPhase
 from domain.exceptions import (
     BusinessRuleViolationError,
-    DomainError,
-    EntityNotFoundError,
     InvalidValueError,
     StateTransitionError,
     ValidationError,
@@ -40,14 +32,8 @@ from domain.services.state_validator import StateValidator
 from domain.value_objects.ammo import Ammo
 from domain.value_objects.health import HP, Shield
 from infrastructure.config.settings import (
-    AppSettings,
-    AudioSettings,
-    CaptureSettings,
     Environment,
-    FeatureFlags,
-    LLMSettings,
     Settings,
-    TriggerSettings,
     clear_settings_cache,
     load_settings,
 )
@@ -55,10 +41,8 @@ from infrastructure.exceptions import (
     AudioError,
     CaptureError,
     ConfigurationLoadError,
-    InfrastructureError,
     LLMError,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -170,7 +154,6 @@ def game_state_factory():
 
 # Need to import StormInfo
 from domain.entities.game_state import StormInfo
-
 
 # ============================================================================
 # Test: Domain entities work with value objects
@@ -422,7 +405,9 @@ class TestFullStateAnalysisPipeline:
 
         # Verify values preserved
         assert restored_state.player.status.hp.value == original_state.player.status.hp.value
-        assert restored_state.player.status.shield.value == original_state.player.status.shield.value
+        assert (
+            restored_state.player.status.shield.value == original_state.player.status.shield.value
+        )
         assert restored_state.player.weapon.ammo.value == original_state.player.weapon.ammo.value
 
         # Run through analyzer
@@ -557,7 +542,6 @@ class TestExceptionPropagation:
 
 # Import OrchestrationError for the test
 from application.exceptions import OrchestrationError
-
 
 # ============================================================================
 # Test: Configuration loading

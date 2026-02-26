@@ -3,7 +3,6 @@
 import argparse
 import logging
 import sys
-from typing import Any
 
 from infrastructure.config.settings import Settings, load_settings
 from infrastructure.exceptions import InfrastructureError
@@ -317,6 +316,7 @@ def handle_exception(exc: Exception, debug: bool = False) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         if debug:
             import traceback
+
             traceback.print_exc()
         return 1
 

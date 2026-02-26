@@ -55,12 +55,14 @@ class InfrastructureError(GameStudyError):
             cause: Original exception that caused this error
         """
         context = context or {}
-        context.update({
-            "component": component,
-            "operation": operation,
-            "retryable": retryable,
-            "layer": "infrastructure",
-        })
+        context.update(
+            {
+                "component": component,
+                "operation": operation,
+                "retryable": retryable,
+                "layer": "infrastructure",
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.component = component
@@ -105,12 +107,14 @@ class ConnectionError(InfrastructureError):
         """
         message = f"Failed to connect to '{service}': {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "service": service,
-            "retry_count": retry_count,
-            "max_retries": max_retries,
-            "retry_after_ms": retry_after_ms,
-        })
+        context.update(
+            {
+                "service": service,
+                "retry_count": retry_count,
+                "max_retries": max_retries,
+                "retry_after_ms": retry_after_ms,
+            }
+        )
 
         # Connection errors are often retryable
         kwargs.setdefault("retryable", True)
@@ -158,11 +162,13 @@ class CaptureError(InfrastructureError):
         """
         message = f"Capture failed for '{source}': {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "source": source,
-            "frame_number": frame_number,
-            "timestamp_ms": timestamp_ms,
-        })
+        context.update(
+            {
+                "source": source,
+                "frame_number": frame_number,
+                "timestamp_ms": timestamp_ms,
+            }
+        )
 
         kwargs.setdefault("component", "capture")
         kwargs.setdefault("operation", "read")
@@ -208,10 +214,12 @@ class AudioError(InfrastructureError):
         """
         message = f"Audio operation '{operation}' failed: {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "device_index": device_index,
-            "sample_rate": sample_rate,
-        })
+        context.update(
+            {
+                "device_index": device_index,
+                "sample_rate": sample_rate,
+            }
+        )
 
         kwargs.setdefault("component", "audio")
 
@@ -255,11 +263,13 @@ class DeviceNotFoundError(InfrastructureError):
             message = f"No {device_type} device available"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "device_type": device_type,
-            "device_id": device_id,
-            "available_devices": available_devices,
-        })
+        context.update(
+            {
+                "device_type": device_type,
+                "device_id": device_id,
+                "available_devices": available_devices,
+            }
+        )
 
         kwargs.setdefault("component", device_type)
         kwargs.setdefault("retryable", False)
@@ -308,11 +318,13 @@ class LLMError(InfrastructureError):
         """
         message = f"LLM '{provider}' operation '{operation}' failed: {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "provider": provider,
-            "status_code": status_code,
-            "model": model,
-        })
+        context.update(
+            {
+                "provider": provider,
+                "status_code": status_code,
+                "model": model,
+            }
+        )
 
         # Rate limits and server errors are retryable
         if status_code in (429, 500, 502, 503, 504):
@@ -361,11 +373,13 @@ class TTSError(InfrastructureError):
         message = f"TTS synthesis failed{voice_info}: {reason}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "voice": voice,
-            "provider": provider,
-            "text_length": text_length,
-        })
+        context.update(
+            {
+                "voice": voice,
+                "provider": provider,
+                "text_length": text_length,
+            }
+        )
 
         kwargs.setdefault("component", "tts")
 
@@ -410,11 +424,13 @@ class OCRError(InfrastructureError):
         message = f"OCR failed{region_info}: {reason}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "region": region,
-            "engine": engine,
-            "image_size": image_size,
-        })
+        context.update(
+            {
+                "region": region,
+                "engine": engine,
+                "image_size": image_size,
+            }
+        )
 
         kwargs.setdefault("component", "ocr")
 
@@ -460,10 +476,12 @@ class VisionError(InfrastructureError):
         message = f"Vision operation '{operation}' failed: {reason}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "model": model,
-            "image_size": image_size,
-        })
+        context.update(
+            {
+                "model": model,
+                "image_size": image_size,
+            }
+        )
 
         kwargs.setdefault("component", "vision")
 
@@ -504,10 +522,12 @@ class ConfigurationLoadError(InfrastructureError):
         message = f"Failed to load configuration from '{config_path}': {reason}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "config_path": config_path,
-            "config_type": config_type,
-        })
+        context.update(
+            {
+                "config_path": config_path,
+                "config_type": config_type,
+            }
+        )
 
         kwargs.setdefault("component", "config")
         kwargs.setdefault("operation", "load")
@@ -552,11 +572,13 @@ class ResourceExhaustedError(InfrastructureError):
         message = f"Resource '{resource}' exhausted: {reason}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "resource": resource,
-            "current_usage": current_usage,
-            "limit": limit,
-        })
+        context.update(
+            {
+                "resource": resource,
+                "current_usage": current_usage,
+                "limit": limit,
+            }
+        )
 
         kwargs.setdefault("component", resource)
         kwargs.setdefault("retryable", resource == "rate_limit")

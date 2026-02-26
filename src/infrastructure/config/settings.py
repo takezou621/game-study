@@ -8,14 +8,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    SecretStr,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 from utils.logger import get_logger
 
@@ -413,7 +406,11 @@ def _apply_env_variables(data: dict[str, Any], settings_model: type[BaseModel]) 
         field_name_upper = field_name.upper()
 
         # Handle nested models (sections like 'app', 'audio', etc.)
-        if field_type is not None and isinstance(field_type, type) and issubclass(field_type, BaseModel):
+        if (
+            field_type is not None
+            and isinstance(field_type, type)
+            and issubclass(field_type, BaseModel)
+        ):
             if field_name not in result:
                 result[field_name] = {}
             if not isinstance(result[field_name], dict):
@@ -438,7 +435,9 @@ def _apply_env_variables(data: dict[str, Any], settings_model: type[BaseModel]) 
                         else:
                             actual_type = nested_type
                     try:
-                        result[field_name][nested_field_name] = _parse_env_value(env_value, actual_type)
+                        result[field_name][nested_field_name] = _parse_env_value(
+                            env_value, actual_type
+                        )
                         logger.debug(
                             f"Applied env var GAMECOACH_{field_name_upper}_{nested_field_name.upper()}"
                         )

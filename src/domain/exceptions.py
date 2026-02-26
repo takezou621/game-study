@@ -56,13 +56,15 @@ class DomainError(GameStudyError):
             cause: Original exception that caused this error
         """
         context = context or {}
-        context.update({
-            "entity_type": entity_type,
-            "field_name": field_name,
-            "expected": str(expected) if expected is not None else None,
-            "actual": str(actual) if actual is not None else None,
-            "layer": "domain",
-        })
+        context.update(
+            {
+                "entity_type": entity_type,
+                "field_name": field_name,
+                "expected": str(expected) if expected is not None else None,
+                "actual": str(actual) if actual is not None else None,
+                "layer": "domain",
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.entity_type = entity_type
@@ -155,11 +157,13 @@ class StateTransitionError(DomainError):
             **kwargs: Additional arguments passed to DomainError
         """
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "from_state": from_state,
-            "to_state": to_state,
-            "allowed_transitions": allowed_transitions,
-        })
+        context.update(
+            {
+                "from_state": from_state,
+                "to_state": to_state,
+                "allowed_transitions": allowed_transitions,
+            }
+        )
 
         super().__init__(message, context=context, **kwargs)
         self.from_state = from_state
@@ -275,10 +279,12 @@ class BusinessRuleViolationError(DomainError):
             **kwargs: Additional arguments passed to DomainError
         """
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "rule_name": rule_name,
-            "details": details,
-        })
+        context.update(
+            {
+                "rule_name": rule_name,
+                "details": details,
+            }
+        )
 
         super().__init__(message, context=context, **kwargs)
         self.rule_name = rule_name

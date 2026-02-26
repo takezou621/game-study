@@ -72,6 +72,7 @@ from typing import Any
 # Base Exception
 # ============================================================================
 
+
 class GameStudyError(Exception):
     """Base exception for all game-study errors.
 
@@ -86,10 +87,7 @@ class GameStudyError(Exception):
     error_code: str = "GS000"
 
     def __init__(
-        self,
-        message: str,
-        context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        self, message: str, context: dict[str, Any] | None = None, cause: Exception | None = None
     ):
         """Initialize GameStudyError.
 
@@ -146,17 +144,23 @@ class GameStudyError(Exception):
             level: Logging level (default: ERROR)
         """
         from src.utils.logger import get_logger
+
         logger = get_logger(__name__)
-        logger.log(level, self.message, extra={
-            "exception_type": self.__class__.__name__,
-            "context": self.context,
-            "cause": str(self.cause) if self.cause else None,
-        })
+        logger.log(
+            level,
+            self.message,
+            extra={
+                "exception_type": self.__class__.__name__,
+                "context": self.context,
+                "cause": str(self.cause) if self.cause else None,
+            },
+        )
 
 
 # ============================================================================
 # Vision Errors
 # ============================================================================
+
 
 class VisionError(GameStudyError):
     """Base exception for vision-related errors.
@@ -177,7 +181,7 @@ class VisionError(GameStudyError):
         detection_type: str | None = None,
         frame_shape: tuple | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize VisionError.
 
@@ -189,10 +193,12 @@ class VisionError(GameStudyError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "detection_type": detection_type,
-            "frame_shape": frame_shape,
-        })
+        context.update(
+            {
+                "detection_type": detection_type,
+                "frame_shape": frame_shape,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.detection_type = detection_type
@@ -224,6 +230,7 @@ class ROIExtractionError(VisionError):
 # Trigger Errors
 # ============================================================================
 
+
 class TriggerError(GameStudyError):
     """Base exception for trigger-related errors."""
 
@@ -248,6 +255,7 @@ class TriggerEvaluationError(TriggerError):
 # ============================================================================
 # Dialogue Errors
 # ============================================================================
+
 
 class DialogueError(GameStudyError):
     """Base exception for dialogue-related errors."""
@@ -276,7 +284,7 @@ class APIError(DialogueError):
         retryable: bool = False,
         retry_after: float | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize API error.
 
@@ -290,11 +298,13 @@ class APIError(DialogueError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "status_code": status_code,
-            "endpoint": endpoint,
-            "retryable": retryable,
-        })
+        context.update(
+            {
+                "status_code": status_code,
+                "endpoint": endpoint,
+                "retryable": retryable,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.status_code = status_code
@@ -307,12 +317,7 @@ class APIError(DialogueError):
         return self.retryable
 
     @classmethod
-    def from_response(
-        cls,
-        endpoint: str,
-        status_code: int,
-        response_text: str
-    ) -> "APIError":
+    def from_response(cls, endpoint: str, status_code: int, response_text: str) -> "APIError":
         """Create APIError from HTTP response.
 
         Args:
@@ -330,7 +335,7 @@ class APIError(DialogueError):
             status_code=status_code,
             endpoint=endpoint,
             retryable=retryable,
-            context={"response_text": response_text[:500]}  # Truncate long responses
+            context={"response_text": response_text[:500]},  # Truncate long responses
         )
 
 
@@ -352,7 +357,7 @@ class RateLimitExceeded(APIError):
         retry_after: float = 60.0,
         limit: str | None = None,
         remaining: int | None = None,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ):
         """Initialize rate limit error.
 
@@ -365,11 +370,13 @@ class RateLimitExceeded(APIError):
             context: Additional context
         """
         context = context or {}
-        context.update({
-            "retry_after": retry_after,
-            "limit": limit,
-            "remaining": remaining,
-        })
+        context.update(
+            {
+                "retry_after": retry_after,
+                "limit": limit,
+                "remaining": remaining,
+            }
+        )
 
         super().__init__(
             message,
@@ -377,7 +384,7 @@ class RateLimitExceeded(APIError):
             retryable=True,
             retry_after=retry_after,
             context=context,
-            cause=cause
+            cause=cause,
         )
         self.retry_after = retry_after
         self.limit = limit
@@ -406,6 +413,7 @@ class TTSError(DialogueError):
 # Capture Errors
 # ============================================================================
 
+
 class CaptureError(GameStudyError):
     """Base exception for capture-related errors.
 
@@ -425,7 +433,7 @@ class CaptureError(GameStudyError):
         capture_type: str | None = None,
         monitor: int | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize CaptureError.
 
@@ -437,10 +445,12 @@ class CaptureError(GameStudyError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "capture_type": capture_type,
-            "monitor": monitor,
-        })
+        context.update(
+            {
+                "capture_type": capture_type,
+                "monitor": monitor,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.capture_type = capture_type
@@ -464,6 +474,7 @@ class ScreenCaptureError(CaptureError):
 # ============================================================================
 # WebRTC Errors
 # ============================================================================
+
 
 class WebRTCError(GameStudyError):
     """Base exception for WebRTC-related errors."""
@@ -490,6 +501,7 @@ class ConnectionError(WebRTCError):
 # WebSocket Errors
 # ============================================================================
 
+
 class WebSocketError(GameStudyError):
     """Exception raised for WebSocket connection errors.
 
@@ -509,7 +521,7 @@ class WebSocketError(GameStudyError):
         url: str | None = None,
         state: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize WebSocketError.
 
@@ -521,10 +533,12 @@ class WebSocketError(GameStudyError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "url": url,
-            "state": state,
-        })
+        context.update(
+            {
+                "url": url,
+                "state": state,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.url = url
@@ -534,6 +548,7 @@ class WebSocketError(GameStudyError):
 # ============================================================================
 # Configuration Errors
 # ============================================================================
+
 
 class ConfigError(GameStudyError):
     """Error in configuration.
@@ -551,7 +566,7 @@ class ConfigError(GameStudyError):
         config_key: str | None = None,
         config_file: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize ConfigError.
 
@@ -563,10 +578,12 @@ class ConfigError(GameStudyError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "config_key": config_key,
-            "config_file": config_file,
-        })
+        context.update(
+            {
+                "config_key": config_key,
+                "config_file": config_file,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.config_key = config_key
@@ -595,6 +612,7 @@ class InvalidConfigError(ConfigError):
 # Model Errors
 # ============================================================================
 
+
 class ModelLoadError(GameStudyError):
     """Exception raised when model loading fails.
 
@@ -614,7 +632,7 @@ class ModelLoadError(GameStudyError):
         model_path: str | None = None,
         model_type: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize ModelLoadError.
 
@@ -626,10 +644,12 @@ class ModelLoadError(GameStudyError):
             cause: Original exception
         """
         context = context or {}
-        context.update({
-            "model_path": model_path,
-            "model_type": model_type,
-        })
+        context.update(
+            {
+                "model_path": model_path,
+                "model_type": model_type,
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.model_path = model_path
@@ -639,6 +659,7 @@ class ModelLoadError(GameStudyError):
 # ============================================================================
 # Diagnostics Errors
 # ============================================================================
+
 
 class DiagnosticsError(GameStudyError):
     """Base exception for diagnostics errors.
@@ -657,7 +678,7 @@ class DiagnosticsError(GameStudyError):
         message: str,
         check_type: str | None = None,
         context: dict[str, Any] | None = None,
-        cause: Exception | None = None
+        cause: Exception | None = None,
     ):
         """Initialize DiagnosticsError.
 

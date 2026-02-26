@@ -2,8 +2,6 @@
 
 import importlib.util
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -377,7 +375,7 @@ class TestTriggerEvaluationResultDTO:
 
     def test_result_with_triggers(self):
         """Test result with triggers."""
-        from application.dto.trigger_dto import TriggerResultDTO, TriggerEvaluationResultDTO
+        from application.dto.trigger_dto import TriggerEvaluationResultDTO, TriggerResultDTO
 
         trigger = TriggerResultDTO(
             trigger_id="test",

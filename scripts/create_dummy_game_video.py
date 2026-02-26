@@ -17,9 +17,10 @@ UI要素:
 6. 背景: 暗いグレー (#1a1a1a)
 """
 
+import os
+
 import cv2
 import numpy as np
-import os
 
 # 動画パラメータ
 WIDTH = 1920
@@ -75,9 +76,18 @@ def calculate_shield(frame_num: int) -> int:
         return 10
 
 
-def draw_bar(frame: np.ndarray, x: int, y: int, width: int, height: int,
-             value: int, max_value: int, color: tuple, low_color: tuple = None,
-             low_threshold: int = 30) -> None:
+def draw_bar(
+    frame: np.ndarray,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    value: int,
+    max_value: int,
+    color: tuple,
+    low_color: tuple = None,
+    low_threshold: int = 30,
+) -> None:
     """バーを描画"""
     # 背景バー
     cv2.rectangle(frame, (x, y), (x + width, y + height), BAR_BG_COLOR, -1)
@@ -108,18 +118,26 @@ def draw_hp_shield(frame: np.ndarray, hp: int, shield: int) -> None:
     shield_y = HEIGHT - margin - bar_height
 
     # HPバー
-    draw_bar(frame, hp_x, hp_y, bar_width, bar_height, hp, 100,
-             HP_COLOR, HP_LOW_COLOR, low_threshold=30)
+    draw_bar(
+        frame, hp_x, hp_y, bar_width, bar_height, hp, 100, HP_COLOR, HP_LOW_COLOR, low_threshold=30
+    )
     # HPラベル
-    cv2.putText(frame, f"HP: {hp}/100", (hp_x + 10, hp_y + 18),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 2)
+    cv2.putText(
+        frame, f"HP: {hp}/100", (hp_x + 10, hp_y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 2
+    )
 
     # Shieldバー
-    draw_bar(frame, shield_x, shield_y, bar_width, bar_height, shield, 50,
-             SHIELD_COLOR, None)
+    draw_bar(frame, shield_x, shield_y, bar_width, bar_height, shield, 50, SHIELD_COLOR, None)
     # Shieldラベル
-    cv2.putText(frame, f"Shield: {shield}/50", (shield_x + 10, shield_y + 18),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 2)
+    cv2.putText(
+        frame,
+        f"Shield: {shield}/50",
+        (shield_x + 10, shield_y + 18),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        TEXT_COLOR,
+        2,
+    )
 
 
 def draw_ammo(frame: np.ndarray) -> None:
@@ -130,8 +148,7 @@ def draw_ammo(frame: np.ndarray) -> None:
     thickness = 3
 
     # テキストサイズを取得
-    (text_width, text_height), baseline = cv2.getTextSize(
-        ammo_text, font, font_scale, thickness)
+    (text_width, text_height), baseline = cv2.getTextSize(ammo_text, font, font_scale, thickness)
 
     # 位置 (右上)
     margin = 40
@@ -140,14 +157,20 @@ def draw_ammo(frame: np.ndarray) -> None:
 
     # 背景ボックス
     box_padding = 15
-    cv2.rectangle(frame,
-                  (x - box_padding, y - text_height - box_padding),
-                  (WIDTH - margin + box_padding, y + baseline + box_padding),
-                  (40, 40, 40), -1)
-    cv2.rectangle(frame,
-                  (x - box_padding, y - text_height - box_padding),
-                  (WIDTH - margin + box_padding, y + baseline + box_padding),
-                  (80, 80, 80), 2)
+    cv2.rectangle(
+        frame,
+        (x - box_padding, y - text_height - box_padding),
+        (WIDTH - margin + box_padding, y + baseline + box_padding),
+        (40, 40, 40),
+        -1,
+    )
+    cv2.rectangle(
+        frame,
+        (x - box_padding, y - text_height - box_padding),
+        (WIDTH - margin + box_padding, y + baseline + box_padding),
+        (80, 80, 80),
+        2,
+    )
 
     # テキスト
     cv2.putText(frame, ammo_text, (x, y), font, font_scale, AMMO_COLOR, thickness)
@@ -172,8 +195,15 @@ def draw_minimap(frame: np.ndarray) -> None:
     cv2.circle(frame, (center_x, center_y), 5, (0, 255, 0), -1)
 
     # 方位マーカー
-    cv2.putText(frame, "N", (center_x - 7, center_y - radius + 20),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.4, TEXT_COLOR, 1)
+    cv2.putText(
+        frame,
+        "N",
+        (center_x - 7, center_y - radius + 20),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.4,
+        TEXT_COLOR,
+        1,
+    )
 
     # 簡易的なランドマーク
     cv2.circle(frame, (center_x - 30, center_y - 20), 3, (100, 100, 255), -1)
@@ -263,7 +293,7 @@ def main():
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
     # VideoWriterを初期化
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # H.264コーデック
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # H.264コーデック
     out = cv2.VideoWriter(OUTPUT_PATH, fourcc, FPS, (WIDTH, HEIGHT))
 
     if not out.isOpened():

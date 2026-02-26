@@ -18,6 +18,7 @@ exceptions_spec.loader.exec_module(exceptions_module)
 
 # Make domain.exceptions available for import
 import sys
+
 sys.modules["domain.exceptions"] = exceptions_module
 
 # Load state validator
@@ -162,9 +163,7 @@ class TestStateValidatorValidateStateTransition:
                 weapon=WeaponInfo(ammo=Ammo(value=20)),
             ),
         )
-        is_valid, error = StateValidator.validate_state_transition(
-            valid_state, next_state
-        )
+        is_valid, error = StateValidator.validate_state_transition(valid_state, next_state)
         assert is_valid is True
         assert error == ""
 
@@ -178,9 +177,7 @@ class TestStateValidatorValidateStateTransition:
                 )
             ),
         )
-        is_valid, error = StateValidator.validate_state_transition(
-            valid_state, next_state
-        )
+        is_valid, error = StateValidator.validate_state_transition(valid_state, next_state)
         # This is allowed per the code comment
         assert is_valid is True
 
@@ -198,9 +195,7 @@ class TestStateValidatorValidateStateValue:
 
     def test_validate_state_value_missing_source(self):
         """Test validate_state_value rejects missing source."""
-        is_valid, error = StateValidator.validate_state_value(
-            _value=100, source="", confidence=0.9
-        )
+        is_valid, error = StateValidator.validate_state_value(_value=100, source="", confidence=0.9)
         assert is_valid is False
         assert "Source is required" in error
 

@@ -49,10 +49,7 @@ class RealtimeConnection:
         self._ws: Any | None = None
         self._connected = False
 
-        logger.debug(
-            "RealtimeConnection initialized",
-            extra={"model": model, "voice": voice}
-        )
+        logger.debug("RealtimeConnection initialized", extra={"model": model, "voice": voice})
 
     @property
     def is_connected(self) -> bool:
@@ -109,13 +106,12 @@ class RealtimeConnection:
                 self._connected = True
                 logger.info(
                     "Successfully connected to Realtime API",
-                    extra={"session_id": event.get("session", {}).get("id")}
+                    extra={"session_id": event.get("session", {}).get("id")},
                 )
                 return True
 
             logger.warning(
-                "Unexpected response during connection",
-                extra={"event_type": event.get("type")}
+                "Unexpected response during connection", extra={"event_type": event.get("type")}
             )
             return False
 

@@ -48,11 +48,13 @@ class ApplicationError(GameStudyError):
             cause: Original exception that caused this error
         """
         context = context or {}
-        context.update({
-            "use_case": use_case,
-            "operation": operation,
-            "layer": "application",
-        })
+        context.update(
+            {
+                "use_case": use_case,
+                "operation": operation,
+                "layer": "application",
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.use_case = use_case
@@ -135,11 +137,13 @@ class PortError(ApplicationError):
         """
         message = f"Port '{port_name}' operation '{operation}' failed: {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "port_name": port_name,
-            "operation": operation,
-            "adapter": adapter,
-        })
+        context.update(
+            {
+                "port_name": port_name,
+                "operation": operation,
+                "adapter": adapter,
+            }
+        )
 
         super().__init__(message, operation=operation, context=context, **kwargs)
         self.port_name = port_name
@@ -183,10 +187,12 @@ class ConfigurationError(ApplicationError):
         """
         message = f"Configuration error for '{config_key}': {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "config_key": config_key,
-            "suggestion": suggestion,
-        })
+        context.update(
+            {
+                "config_key": config_key,
+                "suggestion": suggestion,
+            }
+        )
 
         super().__init__(message, context=context, **kwargs)
         self.config_key = config_key
@@ -227,11 +233,13 @@ class DTOParseError(ApplicationError):
         """
         message = f"Failed to parse {dto_type}: {len(errors)} error(s)"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "dto_type": dto_type,
-            "errors": errors,
-            "error_count": len(errors),
-        })
+        context.update(
+            {
+                "dto_type": dto_type,
+                "errors": errors,
+                "error_count": len(errors),
+            }
+        )
 
         super().__init__(message, context=context, **kwargs)
         self.dto_type = dto_type
@@ -273,10 +281,12 @@ class ServiceError(ApplicationError):
         """
         message = f"Service '{service_name}' operation '{operation}' failed: {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "service_name": service_name,
-            "operation": operation,
-        })
+        context.update(
+            {
+                "service_name": service_name,
+                "operation": operation,
+            }
+        )
 
         super().__init__(message, operation=operation, context=context, **kwargs)
         self.service_name = service_name
@@ -319,11 +329,13 @@ class OrchestrationError(ApplicationError):
         """
         message = f"Orchestration failed in '{workflow}' at stage '{stage}': {reason}"
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "workflow": workflow,
-            "stage": stage,
-            "failed_components": failed_components,
-        })
+        context.update(
+            {
+                "workflow": workflow,
+                "stage": stage,
+                "failed_components": failed_components,
+            }
+        )
 
         super().__init__(message, context=context, **kwargs)
         self.workflow = workflow

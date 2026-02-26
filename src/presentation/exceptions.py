@@ -47,10 +47,12 @@ class PresentationError(GameStudyError):
             cause: Original exception that caused this error
         """
         context = context or {}
-        context.update({
-            "output_format": output_format,
-            "layer": "presentation",
-        })
+        context.update(
+            {
+                "output_format": output_format,
+                "layer": "presentation",
+            }
+        )
 
         super().__init__(message, context=context, cause=cause)
         self.user_message = user_message or message
@@ -90,11 +92,13 @@ class CLIError(PresentationError):
             **kwargs: Additional arguments passed to PresentationError
         """
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "exit_code": exit_code,
-            "command": command,
-            "arguments": arguments,
-        })
+        context.update(
+            {
+                "exit_code": exit_code,
+                "command": command,
+                "arguments": arguments,
+            }
+        )
 
         super().__init__(message, user_message=user_message, context=context, **kwargs)
         self.exit_code = exit_code
@@ -131,13 +135,15 @@ class OutputFormatError(PresentationError):
             **kwargs: Additional arguments passed to PresentationError
         """
         message = f"Failed to format output as {format}: {reason}"
-        user_message = f"Error formatting output. Please try a different format."
+        user_message = "Error formatting output. Please try a different format."
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "format": format,
-            "data_type": data_type,
-        })
+        context.update(
+            {
+                "format": format,
+                "data_type": data_type,
+            }
+        )
 
         kwargs.setdefault("output_format", format)
 
@@ -183,11 +189,13 @@ class UserInputError(PresentationError):
             user_message += f" {suggestion}"
 
         context = kwargs.pop("context", None) or {}
-        context.update({
-            "field": field,
-            "value": str(value) if value is not None else None,
-            "suggestion": suggestion,
-        })
+        context.update(
+            {
+                "field": field,
+                "value": str(value) if value is not None else None,
+                "suggestion": suggestion,
+            }
+        )
 
         super().__init__(message, user_message=user_message, context=context, **kwargs)
         self.field = field
@@ -222,7 +230,7 @@ class DisplayError(PresentationError):
             **kwargs: Additional arguments passed to PresentationError
         """
         message = f"Display operation '{operation}' failed: {reason}"
-        user_message = f"Error displaying output. Please check your terminal settings."
+        user_message = "Error displaying output. Please check your terminal settings."
 
         context = kwargs.pop("context", None) or {}
         context["operation"] = operation
@@ -258,7 +266,7 @@ class FormatterError(PresentationError):
             **kwargs: Additional arguments passed to PresentationError
         """
         message = f"Formatter '{formatter}' error: {reason}"
-        user_message = f"Error formatting output."
+        user_message = "Error formatting output."
 
         context = kwargs.pop("context", None) or {}
         context["formatter"] = formatter

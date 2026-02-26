@@ -18,6 +18,7 @@ exceptions_spec.loader.exec_module(exceptions_module)
 
 # Make domain.exceptions available for import
 import sys
+
 sys.modules["domain.exceptions"] = exceptions_module
 
 # Load value objects
