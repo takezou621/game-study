@@ -461,6 +461,69 @@ class TestOCRDetector:
             result = ocr.extract_ammo(np.ones((30, 80, 3), dtype=np.uint8))
             assert result["value"] == 999  # Clamped to max
 
+    def test_ocr_template_accuracy(self):
+        """Test OCR template matching accuracy on synthetic digits.
+
+        Verifies that the template-based OCR can correctly recognize
+        digits generated from the same patterns with 95%+ accuracy.
+        """
+        from vision.ocr import OCRDetector
+        from vision.templates import TEMPLATE_HEIGHT, TEMPLATE_WIDTH
+
+        ocr = OCRDetector(use_template_matching=True)
+
+        # Test each digit template
+        correct = 0
+        total = 10
+
+        for digit in range(10):
+            # Use the loaded template directly
+            if digit in ocr.digit_templates:
+                template = ocr.digit_templates[digit]
+                # Recognize the template itself
+                recognized, confidence = ocr._recognize_digit(template)
+                if recognized == digit and confidence > 0.5:
+                    correct += 1
+
+        # Require 95% accuracy (at least 9/10 correct)
+        accuracy = correct / total
+        assert accuracy >= 0.95, f"OCR accuracy {accuracy:.1%} is below 95% threshold"
+
+    def test_ocr_recognize_all_digits(self):
+        """Test that OCR can recognize all digits 0-9."""
+        from vision.ocr import OCRDetector
+
+        ocr = OCRDetector(use_template_matching=True)
+
+        # Test recognition of each template
+        recognized_digits = set()
+        for digit, template in ocr.digit_templates.items():
+            recognized, confidence = ocr._recognize_digit(template)
+            recognized_digits.add(recognized)
+            # Each template should match itself with high confidence
+            assert confidence > 0.3, f"Digit {digit} recognition confidence too low: {confidence}"
+
+        # All digits should be recognizable
+        assert recognized_digits == set(range(10)), f"Not all digits recognized: {recognized_digits}"
+
+    def test_ocr_confidence_scores(self):
+        """Test that OCR confidence scores are reasonable."""
+        from vision.ocr import OCRDetector
+        from vision.templates import TEMPLATE_HEIGHT, TEMPLATE_WIDTH
+
+        ocr = OCRDetector(use_template_matching=True)
+
+        for digit, template in ocr.digit_templates.items():
+            recognized, confidence = ocr._recognize_digit(template)
+
+            # Confidence should be between 0 and 1
+            assert 0.0 <= confidence <= 1.0, f"Invalid confidence {confidence} for digit {digit}"
+
+            # Template matching itself should have reasonable confidence
+            if recognized == digit:
+                # Correct recognition should have confidence > 0.3
+                assert confidence > 0.3, f"Low confidence {confidence} for correct digit {digit}"
+
 
 # ============================================================================
 # StateBuilder Tests

@@ -320,3 +320,30 @@ class YOLODetector:
                 "enabled": self.enabled,
                 "model_path": self.model_path,
             }
+
+    @classmethod
+    def from_config(cls, config_path: str = "configs/vision.yaml") -> "YOLODetector":
+        """Create YOLODetector from configuration file.
+
+        Args:
+            config_path: Path to vision configuration file
+
+        Returns:
+            Configured YOLODetector instance
+        """
+        import yaml
+
+        try:
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+        except (FileNotFoundError, yaml.YAMLError):
+            logger.warning(f"Could not load config from {config_path}, using defaults")
+            return cls()
+
+        yolo_config = config.get("vision", {}).get("yolo", {})
+
+        return cls(
+            model_path=yolo_config.get("model_path"),
+            confidence_threshold=yolo_config.get("confidence_threshold", 0.5),
+            iou_threshold=yolo_config.get("iou_threshold", 0.45),
+        )

@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from vision.templates import DIGITS_DIR, TEMPLATE_HEIGHT, TEMPLATE_WIDTH
+from vision.templates.patterns import DIGIT_PATTERNS, PATTERN_GRID_HEIGHT, PATTERN_GRID_WIDTH
 
 
 class OCRDetector:
@@ -72,7 +73,7 @@ class OCRDetector:
         create_synthetic_templates(self.templates_dir)
 
     def _create_digit_template(self, digit: int) -> np.ndarray:
-        """Create a single digit template on-the-fly.
+        """Create a single digit template on-the-fly using shared patterns.
 
         Args:
             digit: The digit (0-9) to create
@@ -80,169 +81,12 @@ class OCRDetector:
         Returns:
             Grayscale template array
         """
-        # Simple pattern-based digit generation
         template = np.zeros((TEMPLATE_HEIGHT, TEMPLATE_WIDTH), dtype=np.uint8)
 
-        # Define patterns for each digit (scaled to 20x30)
-        patterns = {
-            0: [
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (1, 2),
-                (5, 2),
-                (1, 3),
-                (5, 3),
-                (1, 4),
-                (5, 4),
-                (1, 5),
-                (5, 5),
-                (1, 6),
-                (5, 6),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-            1: [(3, 1), (2, 2), (3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (2, 7), (3, 7), (4, 7)],
-            2: [
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (1, 2),
-                (5, 2),
-                (5, 3),
-                (4, 4),
-                (3, 5),
-                (2, 6),
-                (1, 7),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-                (5, 7),
-            ],
-            3: [
-                (1, 1),
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (5, 2),
-                (5, 3),
-                (4, 4),
-                (5, 5),
-                (5, 6),
-                (1, 7),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-            4: [
-                (1, 1),
-                (5, 1),
-                (1, 2),
-                (5, 2),
-                (1, 3),
-                (5, 3),
-                (1, 4),
-                (2, 4),
-                (3, 4),
-                (4, 4),
-                (5, 4),
-                (5, 5),
-                (5, 6),
-                (5, 7),
-            ],
-            5: [
-                (1, 1),
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (5, 1),
-                (1, 2),
-                (1, 3),
-                (1, 4),
-                (2, 4),
-                (3, 4),
-                (4, 4),
-                (5, 5),
-                (5, 6),
-                (1, 7),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-            6: [
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (1, 2),
-                (1, 3),
-                (1, 4),
-                (1, 5),
-                (2, 5),
-                (3, 5),
-                (4, 5),
-                (1, 6),
-                (5, 6),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-            7: [
-                (1, 1),
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (5, 1),
-                (5, 2),
-                (4, 3),
-                (4, 4),
-                (3, 5),
-                (3, 6),
-                (3, 7),
-            ],
-            8: [
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (1, 2),
-                (5, 2),
-                (1, 3),
-                (5, 3),
-                (2, 4),
-                (3, 4),
-                (4, 4),
-                (1, 5),
-                (5, 5),
-                (1, 6),
-                (5, 6),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-            9: [
-                (2, 1),
-                (3, 1),
-                (4, 1),
-                (1, 2),
-                (5, 2),
-                (1, 3),
-                (5, 3),
-                (2, 4),
-                (3, 4),
-                (4, 4),
-                (5, 4),
-                (5, 5),
-                (5, 6),
-                (2, 7),
-                (3, 7),
-                (4, 7),
-            ],
-        }
-
-        if digit in patterns:
-            scale_x = TEMPLATE_WIDTH / 7
-            scale_y = TEMPLATE_HEIGHT / 9
-            for gx, gy in patterns[digit]:
+        if digit in DIGIT_PATTERNS:
+            scale_x = TEMPLATE_WIDTH / PATTERN_GRID_WIDTH
+            scale_y = TEMPLATE_HEIGHT / PATTERN_GRID_HEIGHT
+            for gx, gy in DIGIT_PATTERNS[digit]:
                 x = int(gx * scale_x)
                 y = int(gy * scale_y)
                 cv2.rectangle(template, (x, y), (x + 2, y + 3), 255, -1)

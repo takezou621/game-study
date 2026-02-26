@@ -10,11 +10,17 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from vision.templates.patterns import (
+    DIGIT_PATTERNS,
+    PATTERN_GRID_HEIGHT,
+    PATTERN_GRID_WIDTH,
+)
+
 
 def create_digit_template(
     digit: int, width: int = 20, height: int = 30, font_size: int = 24
 ) -> np.ndarray:
-    """Create a template image for a single digit.
+    """Create a template image for a single digit using font rendering.
 
     Args:
         digit: The digit (0-9) to create a template for
@@ -57,7 +63,7 @@ def create_digit_template(
 
 
 def generate_all_templates(output_dir: Path) -> None:
-    """Generate templates for all digits 0-9.
+    """Generate templates for all digits 0-9 using font rendering.
 
     Args:
         output_dir: Directory to save templates
@@ -71,7 +77,7 @@ def generate_all_templates(output_dir: Path) -> None:
         print(f"Generated template for digit {digit}: {output_path}")
 
 
-def create_synthetic_templates(output_dir: Path) -> None:
+def create_synthetic_templates(output_dir: Path, width: int = 20, height: int = 30) -> None:
     """Create synthetic templates using hand-crafted patterns.
 
     This creates more game-like digit patterns when font rendering
@@ -79,161 +85,16 @@ def create_synthetic_templates(output_dir: Path) -> None:
 
     Args:
         output_dir: Directory to save templates
+        width: Template width in pixels
+        height: Template height in pixels
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Define digit patterns as lists of (x, y) coordinates
-    # Each digit is defined in a 5x7 grid, scaled to 20x30
-    digit_patterns = {
-        0: [
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (0, 1),
-            (4, 1),
-            (0, 2),
-            (4, 2),
-            (0, 3),
-            (4, 3),
-            (0, 4),
-            (4, 4),
-            (0, 5),
-            (4, 5),
-            (0, 6),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-            (4, 6),
-        ],
-        1: [(2, 0), (1, 1), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (1, 6), (2, 6), (3, 6)],
-        2: [
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (4, 1),
-            (4, 2),
-            (3, 3),
-            (2, 4),
-            (1, 5),
-            (0, 6),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-            (4, 6),
-        ],
-        3: [
-            (0, 0),
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (4, 1),
-            (4, 2),
-            (3, 3),
-            (4, 4),
-            (4, 5),
-            (0, 6),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-        ],
-        4: [
-            (0, 0),
-            (4, 0),
-            (0, 1),
-            (4, 1),
-            (0, 2),
-            (4, 2),
-            (0, 3),
-            (1, 3),
-            (2, 3),
-            (3, 3),
-            (4, 3),
-            (4, 4),
-            (4, 5),
-            (4, 6),
-        ],
-        5: [
-            (0, 0),
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (4, 0),
-            (0, 1),
-            (0, 2),
-            (0, 3),
-            (1, 3),
-            (2, 3),
-            (3, 3),
-            (4, 4),
-            (4, 5),
-            (0, 6),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-        ],
-        6: [
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (0, 1),
-            (0, 2),
-            (0, 3),
-            (0, 4),
-            (1, 4),
-            (2, 4),
-            (3, 4),
-            (0, 5),
-            (4, 5),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-        ],
-        7: [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (4, 1), (3, 2), (3, 3), (2, 4), (2, 5), (2, 6)],
-        8: [
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (0, 1),
-            (4, 1),
-            (0, 2),
-            (4, 2),
-            (1, 3),
-            (2, 3),
-            (3, 3),
-            (0, 4),
-            (4, 4),
-            (0, 5),
-            (4, 5),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-        ],
-        9: [
-            (1, 0),
-            (2, 0),
-            (3, 0),
-            (0, 1),
-            (4, 1),
-            (0, 2),
-            (4, 2),
-            (1, 3),
-            (2, 3),
-            (3, 3),
-            (4, 3),
-            (4, 4),
-            (4, 5),
-            (1, 6),
-            (2, 6),
-            (3, 6),
-        ],
-    }
+    scale_x = width / PATTERN_GRID_WIDTH
+    scale_y = height / PATTERN_GRID_HEIGHT
 
-    grid_width, grid_height = 5, 7
-    scale_x = 20 / grid_width
-    scale_y = 30 / grid_height
-
-    for digit, pattern in digit_patterns.items():
-        img = np.zeros((30, 20), dtype=np.uint8)
+    for digit, pattern in DIGIT_PATTERNS.items():
+        img = np.zeros((height, width), dtype=np.uint8)
         for gx, gy in pattern:
             # Scale grid coordinates to pixel coordinates
             x_start = int(gx * scale_x)

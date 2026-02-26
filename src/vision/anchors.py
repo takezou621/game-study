@@ -68,8 +68,8 @@ class AnchorDetector:
         if not self.enabled:
             return self._get_default_anchors(frame.shape)
 
-        # Check cache
-        frame_hash = hash(frame.tobytes()) if use_cache else None
+        # Check cache using sampling-based hash (faster for high-res frames)
+        frame_hash = self._compute_frame_hash(frame) if use_cache else None
         if use_cache and self._cache_frame_hash == frame_hash and self._cached_anchors:
             return self._cached_anchors
 
@@ -271,3 +271,51 @@ class AnchorDetector:
         """Reset the anchor cache."""
         self._cached_anchors = None
         self._cache_frame_hash = None
+
+    def _compute_frame_hash(self, frame: np.ndarray) -> int:
+        """Compute a fast hash of the frame using sampling.
+
+        Uses 1/64 sampling for performance on high-res frames.
+
+        Args:
+            frame: Input frame
+
+        Returns:
+            Hash value of the sampled frame
+        """
+        # Sample every 8th pixel for fast hashing (1/64 of original data)
+        sample = frame[::8, ::8]
+        return hash(sample.tobytes())
+
+    @classmethod
+    def from_config(
+        cls,
+        config_path: str = "configs/vision.yaml",
+        yolo_detector: Any = None,
+    ) -> "AnchorDetector":
+        """Create AnchorDetector from configuration file.
+
+        Args:
+            config_path: Path to vision configuration file
+            yolo_detector: Optional YOLO detector instance
+
+        Returns:
+            Configured AnchorDetector instance
+        """
+        import yaml
+
+        try:
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+        except (FileNotFoundError, yaml.YAMLError):
+            logger.warning(f"Could not load config from {config_path}, using defaults")
+            return cls(yolo_detector=yolo_detector)
+
+        anchor_config = config.get("vision", {}).get("anchors", {})
+
+        return cls(
+            yolo_detector=yolo_detector,
+            enabled=anchor_config.get("enabled", True),
+            default_width=anchor_config.get("default_width", 1920),
+            default_height=anchor_config.get("default_height", 1080),
+        )
