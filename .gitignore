@@ -49,3 +49,8 @@ build/
 
 # Temporary review files
 REVIEW_BODY.md
+
+# ML models (downloaded at runtime)
+*.pt
+*.pth
+*.onnx
